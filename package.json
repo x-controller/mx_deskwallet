@@ -1,0 +1,13 @@
+{
+  "name": "mx-deskwallet",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "pnpm --dir frontend/web dev",
+    "build": "pnpm --dir frontend/web build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

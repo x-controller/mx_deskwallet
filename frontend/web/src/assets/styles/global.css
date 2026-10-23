@@ -1,0 +1,41 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-size: var(--mx-font-md);
+  color: var(--mx-color-text);
+  background: var(--mx-color-page);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mx-color-bg-active);
+  border-radius: var(--mx-radius-full);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
