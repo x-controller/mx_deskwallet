@@ -8,6 +8,7 @@ import MxTooltip from '@/components/MxTooltip.vue'
 import MxSkeleton from '@/components/MxSkeleton.vue'
 import MxEmpty from '@/components/MxEmpty.vue'
 import MxTag from '@/components/MxTag.vue'
+import WalletTokenCell from './WalletTokenCell.vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { formatAmount } from '@/utils/format'
@@ -56,6 +57,7 @@ async function remove(w) {
       <span>名称</span>
       <span>地址</span>
       <span class="is-right">余额</span>
+      <span>Token</span>
       <span>分组</span>
       <span class="is-right">操作</span>
     </div>
@@ -75,6 +77,7 @@ async function remove(w) {
           </template>
           <span v-else class="wallet-row__symbol">—</span>
         </span>
+        <WalletTokenCell :balance="balanceOf(w)" :tokens="networkStore.activeNetwork?.tokens ?? []" />
         <span><MxTag>{{ groupName[w.groupId] || '默认' }}</MxTag></span>
         <span class="wallet-row__actions">
           <MxTooltip content="清空此钱包">
@@ -116,7 +119,7 @@ async function remove(w) {
 .wallet-table__head,
 .wallet-row {
   display: grid;
-  grid-template-columns: 28px minmax(90px, 1fr) minmax(200px, 1.6fr) minmax(120px, 1fr) 90px 92px;
+  grid-template-columns: 28px minmax(80px, 0.9fr) minmax(190px, 1.4fr) minmax(100px, 0.9fr) minmax(150px, 1.3fr) 76px 92px;
   align-items: center;
   gap: var(--mx-space-sm);
   padding: 0 var(--mx-space-sm);

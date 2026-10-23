@@ -20,6 +20,9 @@
   --mx-space-md: 16px;
   --mx-space-lg: 24px;
 
+  /* 字体：全站统一等宽字体，只在 global.css 的 body 上引用一次 */
+  --mx-font-family: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+
   /* 字号 */
   --mx-font-xs: 11px; /* 辅助说明 / 标签 */
   --mx-font-sm: 12px;

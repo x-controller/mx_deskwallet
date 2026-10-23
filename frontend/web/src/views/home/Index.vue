@@ -10,6 +10,7 @@ import CreateWalletDialog from '@/components/wallet/CreateWalletDialog.vue'
 import EditWalletDialog from '@/components/wallet/EditWalletDialog.vue'
 import NetworkDialog from '@/components/network/NetworkDialog.vue'
 import DrainDialog from '@/components/drain/DrainDialog.vue'
+import FontDialog from '@/components/home/FontDialog.vue'
 import { useVaultStore, DEFAULT_GROUP_ID } from '@/stores/vault'
 import { useWalletStore } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
@@ -22,7 +23,7 @@ const networkStore = useNetworkStore()
 const activeGroupId = ref('all')
 const keyword = ref('')
 const refreshing = ref(false)
-const dialogs = reactive({ import: false, create: false, edit: false, network: false, drain: false })
+const dialogs = reactive({ import: false, create: false, edit: false, network: false, drain: false, font: false })
 const editingWallet = ref(null)
 const drainTargets = ref([])
 
@@ -100,6 +101,7 @@ onMounted(() => refresh())
       @drain="openDrain(drainCandidates)"
       @network="dialogs.network = true"
       @refresh="refresh()"
+      @font="dialogs.font = true"
       @lock="lock"
     />
 
@@ -121,6 +123,7 @@ onMounted(() => refresh())
     <CreateWalletDialog v-model="dialogs.create" :default-group-id="defaultGroupId" @done="refreshMissing" />
     <EditWalletDialog v-model="dialogs.edit" :wallet="editingWallet" />
     <NetworkDialog v-model="dialogs.network" />
+    <FontDialog v-model="dialogs.font" />
     <DrainDialog v-model="dialogs.drain" :wallets="drainTargets" :network="networkStore.activeNetwork" @done="refresh(drainTargets.map((w) => w.address))" />
   </div>
 </template>

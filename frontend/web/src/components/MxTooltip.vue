@@ -64,6 +64,7 @@ function hide() {
   font-size: var(--mx-font-sm);
   line-height: 1.4;
   word-break: break-all;
+  white-space: pre-line;
   pointer-events: none;
 }
 </style>

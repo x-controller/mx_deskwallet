@@ -248,7 +248,8 @@ async function remove() {
   color: var(--mx-color-text-secondary);
 }
 
-.network__half .network__label {
+/* 同一行的第二栏（符号）标签自适应，第一栏（Chain ID）仍占标签列，输入框与上下行左对齐 */
+.network__half + .network__half .network__label {
   width: auto;
 }
 

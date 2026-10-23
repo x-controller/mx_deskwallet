@@ -84,6 +84,20 @@ export async function runPool(items, limit, worker) {
   await Promise.all(runners)
 }
 
+/** 公共 RPC 偶发限流 / 超时，失败后间隔重试 */
+export async function withRetry(fn, times = 2, delay = 800) {
+  let lastError
+  for (let i = 0; i <= times; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastError = e
+      if (i < times) await new Promise((r) => setTimeout(r, delay * (i + 1)))
+    }
+  }
+  throw lastError
+}
+
 function errorText(e) {
   return e?.shortMessage || e?.reason || e?.message || String(e)
 }

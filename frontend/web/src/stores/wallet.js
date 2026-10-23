@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
 import { Wallet } from 'ethers'
 import { useVaultStore, DEFAULT_GROUP_ID } from './vault'
-import { fetchNativeBalance, runPool } from '@/utils/chain'
+import { fetchNativeBalance, fetchTokenBalance, runPool, withRetry } from '@/utils/chain'
 
 const uid = () => crypto.randomUUID()
 const normalizeKey = (k) => (k.startsWith('0x') ? k : `0x${k}`).toLowerCase()
@@ -15,7 +15,7 @@ export const useWalletStore = defineStore('wallet', () => {
 
   /** 多选的钱包 id */
   const selectedIds = ref(new Set())
-  /** 余额缓存：`${networkId}:${address}` → { raw: bigint | null, loading, error } */
+  /** 余额缓存：`${networkId}:${address}` → { raw: 原生币 bigint | null, tokens: { 合约地址小写: bigint | null }, loading, error } */
   const balances = reactive({})
   const lastRefreshAt = ref(0)
 
@@ -120,15 +120,24 @@ export const useWalletStore = defineStore('wallet', () => {
   async function refreshBalances(network, addresses) {
     if (!network) return
     const targets = addresses.map((address) => ({ address, key: balanceKey(network.id, address) }))
+    const tokens = network.tokens ?? []
     targets.forEach(({ key }) => {
-      balances[key] = { raw: balances[key]?.raw ?? null, loading: true, error: '' }
+      balances[key] = { raw: balances[key]?.raw ?? null, tokens: balances[key]?.tokens ?? {}, loading: true, error: '' }
     })
     await runPool(targets, 6, async ({ address, key }) => {
       try {
-        const raw = await fetchNativeBalance(network, address)
-        balances[key] = { raw, loading: false, error: '' }
+        // 原生币与各 Token 同时查，单个 Token 失败记为 null，不影响其他
+        const [raw, ...tokenRaws] = await Promise.all([
+          withRetry(() => fetchNativeBalance(network, address)),
+          ...tokens.map((t) => withRetry(() => fetchTokenBalance(network, t.address, address)).catch(() => null)),
+        ])
+        const tokenMap = {}
+        tokens.forEach((t, i) => {
+          tokenMap[t.address.toLowerCase()] = tokenRaws[i]
+        })
+        balances[key] = { raw, tokens: tokenMap, loading: false, error: '' }
       } catch (e) {
-        balances[key] = { raw: null, loading: false, error: e?.shortMessage || e?.message || '查询失败' }
+        balances[key] = { raw: null, tokens: {}, loading: false, error: e?.shortMessage || e?.message || '查询失败' }
       }
     })
     lastRefreshAt.value = Date.now()

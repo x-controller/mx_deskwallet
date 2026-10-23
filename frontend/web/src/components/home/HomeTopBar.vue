@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import {
   RiAddLine,
   RiEraserLine,
+  RiFontSize,
   RiKey2Line,
   RiLockLine,
   RiMoonLine,
@@ -26,7 +27,7 @@ defineProps({
   drainDisabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:keyword', 'import', 'create', 'drain', 'network', 'refresh', 'lock'])
+const emit = defineEmits(['update:keyword', 'import', 'create', 'drain', 'network', 'refresh', 'font', 'lock'])
 
 const networkStore = useNetworkStore()
 const networkOptions = computed(() => networkStore.networks.map((n) => ({ label: n.name, value: n.id })))
@@ -63,6 +64,9 @@ const networkOptions = computed(() => networkStore.networks.map((n) => ({ label:
       <span class="top-bar__divider" />
       <MxTooltip content="刷新余额">
         <MxButton icon size="sm" aria-label="刷新余额" :loading="refreshing" @click="emit('refresh')"><RiRefreshLine size="16" /></MxButton>
+      </MxTooltip>
+      <MxTooltip content="字体">
+        <MxButton icon size="sm" aria-label="字体" @click="emit('font')"><RiFontSize size="16" /></MxButton>
       </MxTooltip>
       <MxTooltip :content="theme === 'dark' ? '浅色主题' : '深色主题'">
         <MxButton icon size="sm" aria-label="切换主题" @click="toggleTheme">
