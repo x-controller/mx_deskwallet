@@ -7,6 +7,7 @@ import WalletTable from '@/components/home/WalletTable.vue'
 import StatusBar from '@/components/home/StatusBar.vue'
 import TxTable from '@/components/tx/TxTable.vue'
 import ImportWalletDialog from '@/components/wallet/ImportWalletDialog.vue'
+import WatchWalletDialog from '@/components/wallet/WatchWalletDialog.vue'
 import CreateWalletDialog from '@/components/wallet/CreateWalletDialog.vue'
 import EditWalletDialog from '@/components/wallet/EditWalletDialog.vue'
 import TransferDialog from '@/components/wallet/TransferDialog.vue'
@@ -18,7 +19,7 @@ import DappProposalDialog from '@/components/dapp/DappProposalDialog.vue'
 import DappRequestDialog from '@/components/dapp/DappRequestDialog.vue'
 import FontDialog from '@/components/home/FontDialog.vue'
 import { useVaultStore, DEFAULT_GROUP_ID } from '@/stores/vault'
-import { useWalletStore } from '@/stores/wallet'
+import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
 import { useDappStore } from '@/stores/dapp'
@@ -38,7 +39,7 @@ const mode = ref('wallets')
 const activeGroupId = ref('all')
 const keyword = ref('')
 const refreshing = ref(false)
-const dialogs = reactive({ import: false, create: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false, dapp: false })
+const dialogs = reactive({ import: false, create: false, watch: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false, dapp: false })
 const editingWallet = ref(null)
 const transferWallet = ref(null)
 const drainTargets = ref([])
@@ -70,13 +71,17 @@ const visibleTxs = computed(() => {
 const defaultGroupId = computed(() => (activeGroupId.value === 'all' ? DEFAULT_GROUP_ID : activeGroupId.value))
 
 const selectedVisible = computed(() => visibleWallets.value.filter((w) => walletStore.selectedIds.has(w.id)))
-const drainCandidates = computed(() => (selectedVisible.value.length ? selectedVisible.value : visibleWallets.value))
-/** 顶栏批量操作的提示文案：选中则作用于选中，否则作用于当前列表全部 */
+/** 批量操作的对象：选中则作用于选中，否则作用于当前列表全部；观察钱包没有私钥，一律排除 */
+const batchScope = computed(() => (selectedVisible.value.length ? selectedVisible.value : visibleWallets.value))
+const drainCandidates = computed(() => batchScope.value.filter((w) => !isWatchWallet(w)))
 function batchHint(action) {
-  if (!drainCandidates.value.length) return `${action}（当前没有钱包）`
+  const watch = batchScope.value.length - drainCandidates.value.length
+  if (!batchScope.value.length) return `${action}（当前没有钱包）`
+  if (!drainCandidates.value.length) return `${action}（观察钱包没有私钥，不能${action}）`
+  const skip = watch ? `，跳过 ${watch} 个观察钱包` : ''
   return selectedVisible.value.length
-    ? `${action}：选中的 ${selectedVisible.value.length} 个钱包`
-    : `${action}：当前列表全部 ${visibleWallets.value.length} 个钱包`
+    ? `${action}：选中的 ${drainCandidates.value.length} 个钱包${skip}`
+    : `${action}：当前列表全部 ${drainCandidates.value.length} 个钱包${skip}`
 }
 const drainHint = computed(() => batchHint('一键清空'))
 const hasDex = computed(() => (networkStore.activeNetwork?.dexes ?? []).length > 0)
@@ -114,19 +119,21 @@ function refreshMissing() {
 }
 
 function openDrain(targets) {
+  targets = targets.filter((w) => !isWatchWallet(w))
   if (!networkStore.activeNetwork || !targets.length) return
   drainTargets.value = targets
   dialogs.drain = true
 }
 
 function openSwap(targets) {
+  targets = targets.filter((w) => !isWatchWallet(w))
   if (!hasDex.value || !targets.length) return
   swapTargets.value = targets
   dialogs.swap = true
 }
 
 function openTransfer(wallet) {
-  if (!networkStore.activeNetwork) return
+  if (!networkStore.activeNetwork || isWatchWallet(wallet)) return
   transferWallet.value = wallet
   dialogs.transfer = true
 }
@@ -176,6 +183,7 @@ onBeforeUnmount(() => clearInterval(pollTimer))
       @dapp="dialogs.dapp = true"
       @import="dialogs.import = true"
       @create="dialogs.create = true"
+      @watch="dialogs.watch = true"
       @drain="openDrain(drainCandidates)"
       @swap="openSwap(drainCandidates)"
       @network="dialogs.network = true"
@@ -197,6 +205,7 @@ onBeforeUnmount(() => clearInterval(pollTimer))
         @drain="openDrain([$event])"
         @import="dialogs.import = true"
         @create="dialogs.create = true"
+        @watch="dialogs.watch = true"
       />
     </div>
 
@@ -204,6 +213,7 @@ onBeforeUnmount(() => clearInterval(pollTimer))
 
     <ImportWalletDialog v-model="dialogs.import" :default-group-id="defaultGroupId" @done="refreshMissing" />
     <CreateWalletDialog v-model="dialogs.create" :default-group-id="defaultGroupId" @done="refreshMissing" />
+    <WatchWalletDialog v-model="dialogs.watch" :default-group-id="defaultGroupId" @done="refreshMissing" />
     <EditWalletDialog v-model="dialogs.edit" :wallet="editingWallet" />
     <TransferDialog v-model="dialogs.transfer" :wallet="transferWallet" :network="networkStore.activeNetwork" @done="refreshBalances([transferWallet.address])" />
     <NetworkDialog v-model="dialogs.network" />

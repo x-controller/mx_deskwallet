@@ -4,6 +4,7 @@ import {
   RiAddLine,
   RiArrowLeftRightLine,
   RiEraserLine,
+  RiEyeLine,
   RiFontSize,
   RiHistoryLine,
   RiKey2Line,
@@ -38,7 +39,7 @@ const props = defineProps({
   dappPending: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'swap', 'network', 'refresh', 'font', 'lock', 'dapp'])
+const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'watch', 'drain', 'swap', 'network', 'refresh', 'font', 'lock', 'dapp'])
 
 const networkStore = useNetworkStore()
 const networkOptions = computed(() => networkStore.networks.map((n) => ({ label: n.name, value: n.id })))
@@ -70,6 +71,9 @@ const searchPlaceholder = computed(() => (isHistory.value ? '搜索哈希 / 地�
       </MxTooltip>
       <MxTooltip content="创建钱包">
         <MxButton icon size="sm" aria-label="创建钱包" @click="emit('create')"><RiAddLine size="18" /></MxButton>
+      </MxTooltip>
+      <MxTooltip content="添加观察钱包（只看余额，不含私钥）">
+        <MxButton icon size="sm" aria-label="添加观察钱包" @click="emit('watch')"><RiEyeLine size="16" /></MxButton>
       </MxTooltip>
       <MxTooltip :content="swapHint">
         <MxButton icon size="sm" aria-label="兑换" :disabled="swapDisabled" @click="emit('swap')"><RiArrowLeftRightLine size="16" /></MxButton>

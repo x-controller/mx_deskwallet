@@ -43,7 +43,7 @@ const canApprove = computed(() => !submitting.value && !missingRequired.value.le
 watch(
   () => props.proposal.id,
   () => {
-    selectedWallets.value = new Set(walletStore.wallets.slice(0, 1).map((w) => w.id))
+    selectedWallets.value = new Set(walletStore.signableWallets.slice(0, 1).map((w) => w.id))
     selectedChains.value = new Set(chainChoices.value.filter(knownChain))
   },
   { immediate: true },
@@ -58,7 +58,7 @@ function toggle(set, key, on) {
 async function approve() {
   submitting.value = true
   try {
-    const accounts = walletStore.wallets.filter((w) => selectedWallets.value.has(w.id)).map((w) => w.address)
+    const accounts = walletStore.signableWallets.filter((w) => selectedWallets.value.has(w.id)).map((w) => w.address)
     await dapp.approveProposal(props.proposal, { accounts, chainIds: [...selectedChains.value] })
     message.success(`已连接 ${metadata.value?.name || 'dApp'}`)
   } catch (e) {
@@ -87,7 +87,7 @@ async function reject() {
       <section class="proposal__section">
         <h3 class="proposal__heading">暴露给 dApp 的钱包</h3>
         <div class="proposal__list">
-          <label v-for="w in walletStore.wallets" :key="w.id" class="proposal__item" :class="{ 'is-checked': selectedWallets.has(w.id) }">
+          <label v-for="w in walletStore.signableWallets" :key="w.id" class="proposal__item" :class="{ 'is-checked': selectedWallets.has(w.id) }">
             <MxCheckbox :model-value="selectedWallets.has(w.id)" @change="toggle(selectedWallets, w.id, $event)">
               <span class="proposal__name">{{ w.name }}</span>
             </MxCheckbox>

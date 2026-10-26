@@ -9,7 +9,7 @@ import MxSkeleton from '@/components/MxSkeleton.vue'
 import MxEmpty from '@/components/MxEmpty.vue'
 import MxTag from '@/components/MxTag.vue'
 import WalletTokenCell from './WalletTokenCell.vue'
-import { useWalletStore } from '@/stores/wallet'
+import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { formatAmount } from '@/utils/format'
 import { confirm } from '@/utils/confirm'
@@ -22,7 +22,7 @@ const props = defineProps({
   filtered: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit', 'drain', 'transfer', 'swap', 'import', 'create'])
+const emit = defineEmits(['edit', 'drain', 'transfer', 'swap', 'import', 'create', 'watch'])
 
 const walletStore = useWalletStore()
 const networkStore = useNetworkStore()
@@ -42,8 +42,11 @@ function balanceOf(w) {
   return networkStore.activeNetwork ? walletStore.getBalance(networkStore.activeNetwork.id, w.address) : null
 }
 
+const WATCH_HINT = '观察钱包没有私钥，不能'
+
 async function remove(w) {
-  const ok = await confirm({ title: '删除钱包', content: `删除「${w.name}」后无法恢复，请确认已备份私钥。`, confirmText: '删除' })
+  const content = isWatchWallet(w) ? `「${w.name}」是观察钱包，删除后可以重新添加地址。` : `删除「${w.name}」后无法恢复，请确认已备份私钥。`
+  const ok = await confirm({ title: '删除钱包', content, confirmText: '删除' })
   if (!ok) return
   await walletStore.removeWallets([w.id])
   message.success('已删除')
@@ -65,7 +68,10 @@ async function remove(w) {
     <div v-if="wallets.length" class="wallet-table__body">
       <div v-for="w in wallets" :key="w.id" class="wallet-row" :class="{ 'is-selected': walletStore.selectedIds.has(w.id) }">
         <MxCheckbox :model-value="walletStore.selectedIds.has(w.id)" @change="walletStore.toggleSelect(w.id, $event)" />
-        <span class="wallet-row__name" :title="w.name">{{ w.name }}</span>
+        <span class="wallet-row__name" :title="w.name">
+          <MxTag v-if="isWatchWallet(w)" type="info">观察</MxTag>
+          <span class="wallet-row__name-text">{{ w.name }}</span>
+        </span>
         <MxAddress :address="w.address" :head="8" :tail="6" />
         <span class="wallet-row__balance is-right">
           <MxSkeleton v-if="balanceOf(w)?.loading" width="72px" />
@@ -80,14 +86,14 @@ async function remove(w) {
         <WalletTokenCell :balance="balanceOf(w)" :tokens="networkStore.activeNetwork?.tokens ?? []" />
         <span><MxTag>{{ groupName[w.groupId] || '默认' }}</MxTag></span>
         <span class="wallet-row__actions">
-          <MxTooltip content="转账">
-            <MxButton icon size="xs" type="surface" aria-label="转账" @click="emit('transfer', w)"><RiSendPlaneLine size="14" /></MxButton>
+          <MxTooltip :content="isWatchWallet(w) ? `${WATCH_HINT}转账` : '转账'">
+            <MxButton icon size="xs" type="surface" aria-label="转账" :disabled="isWatchWallet(w)" @click="emit('transfer', w)"><RiSendPlaneLine size="14" /></MxButton>
           </MxTooltip>
-          <MxTooltip content="兑换">
-            <MxButton icon size="xs" type="surface" aria-label="兑换" @click="emit('swap', w)"><RiArrowLeftRightLine size="14" /></MxButton>
+          <MxTooltip :content="isWatchWallet(w) ? `${WATCH_HINT}兑换` : '兑换'">
+            <MxButton icon size="xs" type="surface" aria-label="兑换" :disabled="isWatchWallet(w)" @click="emit('swap', w)"><RiArrowLeftRightLine size="14" /></MxButton>
           </MxTooltip>
-          <MxTooltip content="清空此钱包">
-            <MxButton icon size="xs" type="surface" aria-label="清空此钱包" @click="emit('drain', w)"><RiEraserLine size="14" /></MxButton>
+          <MxTooltip :content="isWatchWallet(w) ? `${WATCH_HINT}清空` : '清空此钱包'">
+            <MxButton icon size="xs" type="surface" aria-label="清空此钱包" :disabled="isWatchWallet(w)" @click="emit('drain', w)"><RiEraserLine size="14" /></MxButton>
           </MxTooltip>
           <MxTooltip content="编辑">
             <MxButton icon size="xs" type="surface" aria-label="编辑" @click="emit('edit', w)"><RiPencilLine size="14" /></MxButton>
@@ -100,8 +106,9 @@ async function remove(w) {
     </div>
 
     <div v-else class="wallet-table__empty">
-      <MxEmpty :icon="RiWallet3Line" :text="filtered ? '没有匹配的钱包' : '还没有钱包，先导入私钥或创建一个'">
+      <MxEmpty :icon="RiWallet3Line" :text="filtered ? '没有匹配的钱包' : '还没有钱包，先导入私钥、创建一个，或添加只看余额的观察钱包'">
         <template v-if="!filtered">
+          <MxButton size="sm" @click="emit('watch')">添加观察钱包</MxButton>
           <MxButton size="sm" @click="emit('import')">导入私钥</MxButton>
           <MxButton size="sm" type="primary" @click="emit('create')">创建钱包</MxButton>
         </template>
@@ -160,6 +167,13 @@ async function remove(w) {
 }
 
 .wallet-row__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mx-space-xs);
+  min-width: 0;
+}
+
+.wallet-row__name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

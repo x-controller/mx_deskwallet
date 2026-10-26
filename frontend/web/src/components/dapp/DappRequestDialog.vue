@@ -7,7 +7,7 @@ import DappPeerCard from './DappPeerCard.vue'
 import DappTxSummary from './DappTxSummary.vue'
 import DappSignSummary from './DappSignSummary.vue'
 import { useDappStore } from '@/stores/dapp'
-import { useWalletStore } from '@/stores/wallet'
+import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
 import { chainIdOf, classifyRequest, parseTxRequest, decodeTxData, parseSignMessage, parseTypedData, estimateTxGas, executeRequest } from '@/utils/dapp'
@@ -71,6 +71,7 @@ const blocker = computed(() => {
   if (kind.value === 'switchChain') return parsed.value.targetNetwork ? '' : `目标链 Chain ${parsed.value.targetChain} 未配置，请先在「配置 RPC」中添加`
   if (!network.value) return `请求所在链 Chain ${chainId.value} 未配置`
   if (!wallet.value) return '请求的地址不属于本钱包，无法签名'
+  if (isWatchWallet(wallet.value)) return `「${wallet.value.name}」是观察钱包，没有私钥，无法签名`
   return ''
 })
 

@@ -7,7 +7,8 @@ import MxSelect from '@/components/MxSelect.vue'
 import MxButton from '@/components/MxButton.vue'
 import MxTooltip from '@/components/MxTooltip.vue'
 import MxAddress from '@/components/MxAddress.vue'
-import { useWalletStore } from '@/stores/wallet'
+import MxTag from '@/components/MxTag.vue'
+import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { validate, rules } from '@/utils/validate'
 import { copyText } from '@/utils/storage'
 import { message } from '@/utils/message'
@@ -28,6 +29,7 @@ const errors = ref({})
 const loading = ref(false)
 
 const groupOptions = computed(() => walletStore.groups.map((g) => ({ label: g.name, value: g.id })))
+const watchOnly = computed(() => isWatchWallet(props.wallet))
 const maskedKey = computed(() => (showKey.value ? props.wallet?.privateKey : '•'.repeat(66)))
 
 watch(
@@ -61,7 +63,7 @@ async function submit() {
 </script>
 
 <template>
-  <MxDialog :model-value="modelValue" title="编辑钱包" width="520px" @update:model-value="emit('update:modelValue', $event)">
+  <MxDialog :model-value="modelValue" :title="watchOnly ? '编辑观察钱包' : '编辑钱包'" width="520px" @update:model-value="emit('update:modelValue', $event)">
     <div v-if="wallet" class="edit-form">
       <label class="edit-form__row">
         <span class="edit-form__label">名称</span>
@@ -75,7 +77,14 @@ async function submit() {
         <span class="edit-form__label">地址</span>
         <MxAddress :address="wallet.address" full button-type="default" class="edit-form__field" />
       </div>
-      <div class="edit-form__row">
+      <div v-if="watchOnly" class="edit-form__row">
+        <span class="edit-form__label">私钥</span>
+        <div class="edit-form__field edit-form__watch">
+          <MxTag type="info">观察钱包</MxTag>
+          <span class="edit-form__watch-text">未保存私钥，只能查看余额；在「导入私钥」里导入该地址的私钥即可升级为普通钱包。</span>
+        </div>
+      </div>
+      <div v-else class="edit-form__row">
         <span class="edit-form__label">私钥</span>
         <div class="edit-form__key">
           <span class="edit-form__key-text">{{ maskedKey }}</span>
@@ -133,6 +142,17 @@ async function submit() {
   gap: var(--mx-space-xs);
   flex: 1;
   min-width: 0;
+}
+
+.edit-form__watch {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mx-space-xs);
+}
+
+.edit-form__watch-text {
+  font-size: var(--mx-font-sm);
+  color: var(--mx-color-text-secondary);
 }
 
 .edit-form__key-text {

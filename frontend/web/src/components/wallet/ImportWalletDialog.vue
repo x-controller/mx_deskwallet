@@ -40,8 +40,11 @@ async function submit() {
   if (!validKeys.value.length) return
   loading.value = true
   try {
-    const { added, skipped } = await walletStore.importPrivateKeys(validKeys.value, groupId.value)
-    message.success(skipped ? `已导入 ${added} 个，跳过 ${skipped} 个重复` : `已导入 ${added} 个钱包`)
+    const { added, upgraded, skipped } = await walletStore.importPrivateKeys(validKeys.value, groupId.value)
+    const parts = [`已导入 ${added} 个钱包`]
+    if (upgraded) parts.push(`${upgraded} 个观察钱包已补上私钥`)
+    if (skipped) parts.push(`跳过 ${skipped} 个重复`)
+    message.success(parts.join('，'))
     emit('update:modelValue', false)
     emit('done')
   } catch (e) {

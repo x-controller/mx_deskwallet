@@ -32,7 +32,7 @@ async function moveTo(groupId) {
 
 async function removeSelected() {
   const ids = [...walletStore.selectedIds]
-  const ok = await confirm({ title: '删除钱包', content: `将删除选中的 ${ids.length} 个钱包，无法恢复，请确认已备份私钥。`, confirmText: '删除' })
+  const ok = await confirm({ title: '删除钱包', content: `将删除选中的 ${ids.length} 个钱包，无法恢复，请确认普通钱包已备份私钥。`, confirmText: '删除' })
   if (!ok) return
   await walletStore.removeWallets(ids)
   message.success(`已删除 ${ids.length} 个钱包`)
@@ -63,7 +63,7 @@ async function clearTxs() {
       </MxTooltip>
     </template>
     <template v-else>
-      <span>共 {{ walletStore.wallets.length }} 个钱包</span>
+      <span>共 {{ walletStore.wallets.length }} 个钱包<template v-if="walletStore.watchCount">（含 {{ walletStore.watchCount }} 个观察）</template></span>
       <template v-if="selectedCount">
         <span class="status-bar__dot">·</span>
         <span>已选 {{ selectedCount }}</span>

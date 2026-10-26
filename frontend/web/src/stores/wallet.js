@@ -1,16 +1,22 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { Wallet } from 'ethers'
+import { Wallet, getAddress } from 'ethers'
 import { useVaultStore, DEFAULT_GROUP_ID } from './vault'
 import { fetchNativeBalance, fetchTokenBalance, runPool, withRetry } from '@/utils/chain'
 
 const uid = () => crypto.randomUUID()
 const normalizeKey = (k) => (k.startsWith('0x') ? k : `0x${k}`).toLowerCase()
 
+/** 观察钱包：只有地址没有私钥，能查余额、收款，不能签名 */
+export const isWatchWallet = (w) => !w?.privateKey
+
 export const useWalletStore = defineStore('wallet', () => {
   const vault = useVaultStore()
 
   const wallets = computed(() => vault.data?.wallets ?? [])
+  /** 持有私钥、可以签名的钱包（排除观察钱包） */
+  const signableWallets = computed(() => wallets.value.filter((w) => !isWatchWallet(w)))
+  const watchCount = computed(() => wallets.value.length - signableWallets.value.length)
   const groups = computed(() => vault.data?.groups ?? [])
 
   /** 多选的钱包 id */
@@ -22,41 +28,75 @@ export const useWalletStore = defineStore('wallet', () => {
   const balanceKey = (networkId, address) => `${networkId}:${address}`
   const getBalance = (networkId, address) => balances[balanceKey(networkId, address)]
 
-  function nextName() {
+  function nextName(prefix = '钱包') {
     const used = new Set(wallets.value.map((w) => w.name))
     let i = wallets.value.length + 1
-    while (used.has(`钱包 ${i}`)) i++
-    return `钱包 ${i}`
+    while (used.has(`${prefix} ${i}`)) i++
+    return `${prefix} ${i}`
   }
 
-  function pushWallet(privateKey, groupId) {
-    const w = new Wallet(privateKey)
+  function pushWallet({ address, privateKey = '', groupId, prefix }) {
     vault.data.wallets.push({
       id: uid(),
-      name: nextName(),
-      address: w.address,
-      privateKey: w.privateKey,
+      name: nextName(prefix),
+      address,
+      privateKey,
       groupId: groupId || DEFAULT_GROUP_ID,
       createdAt: Date.now(),
     })
-    return w.address
+    return address
   }
 
-  /** 批量导入私钥，返回 { added, skipped }（已存在的地址会跳过） */
+  /**
+   * 批量导入私钥，返回 { added, upgraded, skipped }：
+   * 地址已作为观察钱包存在时补上私钥升级为普通钱包，已有私钥的地址跳过
+   */
   async function importPrivateKeys(keys, groupId) {
-    const existing = new Set(wallets.value.map((w) => w.address.toLowerCase()))
+    const byAddress = Object.fromEntries(wallets.value.map((w) => [w.address.toLowerCase(), w]))
     const seen = new Set()
     let added = 0
+    let upgraded = 0
     let skipped = 0
     for (const raw of keys) {
       const pk = normalizeKey(raw.trim())
-      const address = new Wallet(pk).address.toLowerCase()
-      if (existing.has(address) || seen.has(address)) {
+      const w = new Wallet(pk)
+      const lower = w.address.toLowerCase()
+      if (seen.has(lower)) {
         skipped++
         continue
       }
-      seen.add(address)
-      pushWallet(pk, groupId)
+      seen.add(lower)
+      const existing = byAddress[lower]
+      if (existing) {
+        if (!isWatchWallet(existing)) {
+          skipped++
+          continue
+        }
+        existing.privateKey = w.privateKey
+        upgraded++
+        continue
+      }
+      pushWallet({ address: w.address, privateKey: w.privateKey, groupId })
+      added++
+    }
+    if (added || upgraded) await vault.persist()
+    return { added, upgraded, skipped }
+  }
+
+  /** 批量添加观察钱包（只存地址），返回 { added, skipped }（地址已存在则跳过，无论是否观察钱包） */
+  async function importWatchAddresses(addresses, groupId) {
+    const existing = new Set(wallets.value.map((w) => w.address.toLowerCase()))
+    let added = 0
+    let skipped = 0
+    for (const raw of addresses) {
+      const address = getAddress(raw.trim())
+      const lower = address.toLowerCase()
+      if (existing.has(lower)) {
+        skipped++
+        continue
+      }
+      existing.add(lower)
+      pushWallet({ address, groupId, prefix: '观察' })
       added++
     }
     if (added) await vault.persist()
@@ -65,7 +105,10 @@ export const useWalletStore = defineStore('wallet', () => {
 
   async function createWallets(count, groupId) {
     const created = []
-    for (let i = 0; i < count; i++) created.push(pushWallet(Wallet.createRandom().privateKey, groupId))
+    for (let i = 0; i < count; i++) {
+      const w = Wallet.createRandom()
+      created.push(pushWallet({ address: w.address, privateKey: w.privateKey, groupId }))
+    }
     await vault.persist()
     return created
   }
@@ -145,12 +188,15 @@ export const useWalletStore = defineStore('wallet', () => {
 
   return {
     wallets,
+    signableWallets,
+    watchCount,
     groups,
     selectedIds,
     balances,
     lastRefreshAt,
     getBalance,
     importPrivateKeys,
+    importWatchAddresses,
     createWallets,
     updateWallet,
     removeWallets,
