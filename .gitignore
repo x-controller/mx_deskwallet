@@ -4,3 +4,4 @@ src-tauri/target/
 src-tauri/gen/
 *.log
 .cursor/
+开始.md
