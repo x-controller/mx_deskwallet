@@ -18,7 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['remove'])
 
-const KIND = { transfer: '转账', drain: '清空', approve: '授权', swap: '兑换' }
+const KIND = { transfer: '转账', drain: '清空', approve: '授权', swap: '兑换', dapp: 'dApp' }
 
 const fromName = computed(() => props.walletNames[props.tx.from.toLowerCase()] || '')
 const toName = computed(() => props.walletNames[props.tx.to.toLowerCase()] || '')
@@ -34,6 +34,7 @@ const amountOutText = computed(() => (props.tx.toAsset && props.tx.amountOut ? `
 const detail = computed(() => {
   const t = props.tx
   const lines = []
+  if (t.note) lines.push(t.note)
   if (t.fee) lines.push(`手续费 ${formatAmount(t.fee, 18, 8)} ${t.nativeSymbol}`)
   if (t.blockNumber) lines.push(`区块 ${t.blockNumber}`)
   if (t.settledAt) lines.push(`确认于 ${formatTime(t.settledAt)}`)

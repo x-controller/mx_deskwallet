@@ -7,6 +7,7 @@ import {
   RiFontSize,
   RiHistoryLine,
   RiKey2Line,
+  RiLinksLine,
   RiLockLine,
   RiMoonLine,
   RiRefreshLine,
@@ -33,9 +34,11 @@ const props = defineProps({
   /** 兑换按钮的 tooltip 文案 */
   swapHint: { type: String, default: '兑换' },
   swapDisabled: { type: Boolean, default: false },
+  /** dApp 待处理请求数，大于 0 时按钮高亮 */
+  dappPending: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'swap', 'network', 'refresh', 'font', 'lock'])
+const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'swap', 'network', 'refresh', 'font', 'lock', 'dapp'])
 
 const networkStore = useNetworkStore()
 const networkOptions = computed(() => networkStore.networks.map((n) => ({ label: n.name, value: n.id })))
@@ -73,6 +76,9 @@ const searchPlaceholder = computed(() => (isHistory.value ? '搜索哈希 / 地�
       </MxTooltip>
       <MxTooltip :content="drainHint">
         <MxButton icon size="sm" type="danger" aria-label="一键清空" :disabled="drainDisabled" @click="emit('drain')"><RiEraserLine size="16" /></MxButton>
+      </MxTooltip>
+      <MxTooltip :content="dappPending ? `dApp 连接 · ${dappPending} 个待处理请求` : 'dApp 连接（WalletConnect）'">
+        <MxButton icon size="sm" :type="dappPending ? 'primary' : 'default'" aria-label="dApp 连接" @click="emit('dapp')"><RiLinksLine size="16" /></MxButton>
       </MxTooltip>
       <span class="top-bar__divider" />
       <MxTooltip :content="isHistory ? '返回钱包列表' : '交易记录'">

@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@remixicon/vue": "^4",
+    "@reown/walletkit": "^1.6.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-clipboard-manager": "^2",
     "@tauri-apps/plugin-http": "^2",
     "@tauri-apps/plugin-store": "^2",
+    "@walletconnect/core": "2.25.0",
+    "@walletconnect/utils": "2.25.0",
     "ethers": "^6",
     "pinia": "^3",
     "vue": "^3.5",

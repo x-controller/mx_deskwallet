@@ -1,6 +1,6 @@
 # MX DeskWallet
 
-基于 Tauri 2 + Vue 3 的极简 EVM 桌面钱包：私钥导入、创建钱包、钱包分组、配置 RPC、原生币 / Token 转账、DEX 兑换（Uniswap V2 / V3、PancakeSwap V2 / V3、QuickSwap 等，V3 自动择优手续费档位，可自行添加同类路由）、交易记录（搜索 / 分页 / 状态轮询）、一键清空（先 Token 后原生币，支持勾选）。
+基于 Tauri 2 + Vue 3 的极简 EVM 桌面钱包：私钥导入、创建钱包、钱包分组、配置 RPC、原生币 / Token 转账、DEX 兑换（Uniswap V2 / V3、PancakeSwap V2 / V3、QuickSwap 等，V3 自动择优手续费档位，可自行添加同类路由）、交易记录（搜索 / 分页 / 状态轮询）、一键清空（先 Token 后原生币，支持勾选）、dApp 连接（WalletConnect v2，任何支持 WalletConnect 的网页 dApp 都能连本钱包签名）。
 
 ## 目录
 
@@ -23,3 +23,11 @@ pnpm tauri build    # 产出 NSIS 安装包：src-tauri/target/release/bundle/ns
 - 忘记口令只能在解锁页重置金库（数据清空），请及时在「编辑钱包」里备份私钥
 - 兑换走网络配置里的 Router：V2 直接查 `getAmountsOut`，V3 经 QuoterV2 遍历手续费档位；报价取直连 / 经包装币中转所有路线里输出最多的，显示价格影响并按滑点设最少到手；Token 授权不足时先发 approve（默认只授权本次数量）
 - 转账、兑换与一键清空都需二次确认且不可撤销；广播后的交易进入「交易记录」，待确认记录每 10 秒轮询回执，可识别成功 / 回滚 / 被替换丢弃
+
+## dApp 连接（WalletConnect）
+
+- 应用内置了 Reown Cloud Project ID（构建时的 `VITE_WC_PROJECT_ID`），可在顶栏「dApp 连接」弹框里更换，保存在本机金库
+- 在 dApp 里选择 WalletConnect，复制 `wc:` 连接串粘贴进来，钱包会弹出连接请求：选择暴露的钱包与网络（dApp 要求的链必须已在「配置 RPC」里）
+- 之后 dApp 的每个请求都需要逐条批准：交易会解码 ERC-20 transfer / approve 并估算手续费，无限授权、未知合约、钓鱼域名、eth_sign 都会标红提示；签名支持 personal_sign 与 EIP-712
+- dApp 发出的交易写入交易记录（类型 dApp），锁定钱包后请求会排队，解锁后继续处理
+- 会话由 SDK 保存在本机浏览器存储里，不含私钥；消息经 WalletConnect 中继端到端加密转发

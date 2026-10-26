@@ -13,11 +13,16 @@ import TransferDialog from '@/components/wallet/TransferDialog.vue'
 import NetworkDialog from '@/components/network/NetworkDialog.vue'
 import DrainDialog from '@/components/drain/DrainDialog.vue'
 import SwapDialog from '@/components/swap/SwapDialog.vue'
+import DappDialog from '@/components/dapp/DappDialog.vue'
+import DappProposalDialog from '@/components/dapp/DappProposalDialog.vue'
+import DappRequestDialog from '@/components/dapp/DappRequestDialog.vue'
 import FontDialog from '@/components/home/FontDialog.vue'
 import { useVaultStore, DEFAULT_GROUP_ID } from '@/stores/vault'
 import { useWalletStore } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
+import { useDappStore } from '@/stores/dapp'
+import { message } from '@/utils/message'
 
 const PENDING_POLL_MS = 10000
 
@@ -26,13 +31,14 @@ const vault = useVaultStore()
 const walletStore = useWalletStore()
 const networkStore = useNetworkStore()
 const txStore = useTxStore()
+const dappStore = useDappStore()
 
 /** 主区域：wallets 钱包列表 | history 交易记录 */
 const mode = ref('wallets')
 const activeGroupId = ref('all')
 const keyword = ref('')
 const refreshing = ref(false)
-const dialogs = reactive({ import: false, create: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false })
+const dialogs = reactive({ import: false, create: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false, dapp: false })
 const editingWallet = ref(null)
 const transferWallet = ref(null)
 const drainTargets = ref([])
@@ -146,6 +152,8 @@ let pollTimer
 onMounted(() => {
   refreshBalances()
   txStore.refreshPending(networkStore.networks)
+  // 配置过 Project ID 才连中继；失败只提示，不影响钱包其他功能
+  dappStore.init().catch((e) => message.error(`WalletConnect 初始化失败：${e?.message || e}`))
   pollTimer = setInterval(() => {
     if (txStore.pendingCount) txStore.refreshPending(networkStore.networks)
   }, PENDING_POLL_MS)
@@ -164,6 +172,8 @@ onBeforeUnmount(() => clearInterval(pollTimer))
       :drain-disabled="!drainCandidates.length || !networkStore.activeNetwork"
       :swap-hint="swapHint"
       :swap-disabled="!drainCandidates.length || !hasDex"
+      :dapp-pending="dappStore.pendingCount"
+      @dapp="dialogs.dapp = true"
       @import="dialogs.import = true"
       @create="dialogs.create = true"
       @drain="openDrain(drainCandidates)"
@@ -200,6 +210,9 @@ onBeforeUnmount(() => clearInterval(pollTimer))
     <FontDialog v-model="dialogs.font" />
     <DrainDialog v-model="dialogs.drain" :wallets="drainTargets" :network="networkStore.activeNetwork" @done="refreshBalances(drainTargets.map((w) => w.address))" />
     <SwapDialog v-model="dialogs.swap" :wallets="swapTargets" :network="networkStore.activeNetwork" @done="refreshBalances(swapTargets.map((w) => w.address))" />
+    <DappDialog v-model="dialogs.dapp" />
+    <DappProposalDialog v-if="dappStore.currentProposal" :key="dappStore.currentProposal.id" :proposal="dappStore.currentProposal" />
+    <DappRequestDialog v-else-if="dappStore.currentRequest" :key="dappStore.currentRequest.id" :request="dappStore.currentRequest" />
   </div>
 </template>
 

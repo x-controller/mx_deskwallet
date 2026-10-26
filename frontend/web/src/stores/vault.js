@@ -5,6 +5,7 @@ import { deriveKey, encryptJson, decryptJson, randomBytes, toBase64, fromBase64 
 import { NETWORK_PRESETS } from '@/utils/presets'
 
 export const DEFAULT_GROUP_ID = 'default'
+const DEFAULT_WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID ?? ''
 
 function createDefaultData() {
   return {
@@ -13,6 +14,8 @@ function createDefaultData() {
     networks: structuredClone(NETWORK_PRESETS),
     activeNetworkId: NETWORK_PRESETS[0].id,
     txs: [],
+    /** 应用设置：wcProjectId 为 WalletConnect（Reown Cloud）Project ID，默认取构建时的 VITE_WC_PROJECT_ID */
+    settings: { wcProjectId: DEFAULT_WC_PROJECT_ID },
   }
 }
 
@@ -25,6 +28,8 @@ function migrate(data) {
       if (!d.version) d.version = 'v2'
     })
   })
+  if (!data.settings) data.settings = {}
+  if (!data.settings.wcProjectId) data.settings.wcProjectId = DEFAULT_WC_PROJECT_ID
   return data
 }
 

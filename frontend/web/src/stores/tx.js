@@ -21,8 +21,8 @@ function fromReceipt(receipt) {
 
 /**
  * 交易记录：本应用发出的每一笔链上交易，随金库加密落盘
- * 记录结构：{ id, hash, kind: transfer | drain | approve | swap, networkId, networkName, chainId, nativeSymbol,
- *   from, to, nonce, asset: { symbol, decimals, address|null }, amount(十进制字符串), toAsset, amountOut,
+ * 记录结构：{ id, hash, kind: transfer | drain | approve | swap | dapp, networkId, networkName, chainId, nativeSymbol,
+ *   from, to, nonce, asset: { symbol, decimals, address|null }, amount(十进制字符串), toAsset, amountOut, note,
  *   status: pending | success | failed | dropped, createdAt, settledAt, blockNumber, gasUsed, fee, error }
  */
 export const useTxStore = defineStore('tx', () => {
@@ -41,7 +41,7 @@ export const useTxStore = defineStore('tx', () => {
    * 广播成功后立即登记一条待确认记录，返回记录 id
    * kind：transfer | drain | approve | swap；swap 额外带 toAsset / amountOut（报价）
    */
-  function add({ kind, network, from, to, hash, nonce, asset, amount, toAsset = null, amountOut = null }) {
+  function add({ kind, network, from, to, hash, nonce, asset, amount, toAsset = null, amountOut = null, note = '' }) {
     const record = {
       id: uid(),
       hash,
@@ -57,6 +57,7 @@ export const useTxStore = defineStore('tx', () => {
       amount: amount.toString(),
       toAsset: snapshotAsset(toAsset),
       amountOut: amountOut === null ? '' : amountOut.toString(),
+      note,
       status: 'pending',
       createdAt: Date.now(),
       settledAt: 0,
