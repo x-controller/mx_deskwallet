@@ -12,11 +12,12 @@ function createDefaultData() {
     wallets: [],
     networks: structuredClone(NETWORK_PRESETS),
     activeNetworkId: NETWORK_PRESETS[0].id,
+    txs: [],
   }
 }
 
 /**
- * 本地金库：所有业务数据（钱包 / 分组 / 网络）加密保存在同一个文件里，
+ * 本地金库：所有业务数据（钱包 / 分组 / 网络 / 交易记录）加密保存在同一个文件里，
  * 解锁后在内存中以响应式对象形式提供给各业务 store
  */
 export const useVaultStore = defineStore('vault', () => {

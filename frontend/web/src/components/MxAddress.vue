@@ -16,6 +16,8 @@ const props = defineProps({
   copyable: { type: Boolean, default: true },
   /** 复制按钮底色类型，透传给 MxButton */
   buttonType: { type: String, default: 'surface' },
+  /** 这串十六进制是什么（地址 / 哈希），用于复制按钮文案与提示 */
+  label: { type: String, default: '地址' },
 })
 
 const text = computed(() => (props.full ? props.address : shortAddress(props.address, props.head, props.tail)))
@@ -23,7 +25,7 @@ const text = computed(() => (props.full ? props.address : shortAddress(props.add
 async function copy() {
   try {
     await copyText(props.address)
-    message.success('地址已复制')
+    message.success(`${props.label}已复制`)
   } catch {
     message.error('复制失败')
   }
@@ -35,8 +37,8 @@ async function copy() {
     <MxTooltip :content="full ? '' : address">
       <span class="mx-address__text">{{ text }}</span>
     </MxTooltip>
-    <MxTooltip v-if="copyable" content="复制地址">
-      <MxButton icon size="xs" :type="buttonType" aria-label="复制地址" @click.stop="copy">
+    <MxTooltip v-if="copyable" :content="`复制${label}`">
+      <MxButton icon size="xs" :type="buttonType" :aria-label="`复制${label}`" @click.stop="copy">
         <RiFileCopyLine size="14" />
       </MxButton>
     </MxTooltip>

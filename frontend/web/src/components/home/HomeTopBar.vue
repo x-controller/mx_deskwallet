@@ -4,6 +4,7 @@ import {
   RiAddLine,
   RiEraserLine,
   RiFontSize,
+  RiHistoryLine,
   RiKey2Line,
   RiLockLine,
   RiMoonLine,
@@ -11,6 +12,7 @@ import {
   RiSearchLine,
   RiSettings3Line,
   RiSunLine,
+  RiWallet3Line,
 } from '@remixicon/vue'
 import MxSelect from '@/components/MxSelect.vue'
 import MxInput from '@/components/MxInput.vue'
@@ -19,18 +21,22 @@ import MxTooltip from '@/components/MxTooltip.vue'
 import { useNetworkStore } from '@/stores/network'
 import { theme, toggleTheme } from '@/utils/theme'
 
-defineProps({
+const props = defineProps({
   keyword: { type: String, default: '' },
   refreshing: { type: Boolean, default: false },
+  /** 主区域正在显示什么：wallets 钱包列表 | history 交易记录 */
+  mode: { type: String, default: 'wallets' },
   /** 清空按钮的 tooltip 文案（由父级根据选中数量生成） */
   drainHint: { type: String, default: '一键清空' },
   drainDisabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:keyword', 'import', 'create', 'drain', 'network', 'refresh', 'font', 'lock'])
+const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'network', 'refresh', 'font', 'lock'])
 
 const networkStore = useNetworkStore()
 const networkOptions = computed(() => networkStore.networks.map((n) => ({ label: n.name, value: n.id })))
+const isHistory = computed(() => props.mode === 'history')
+const searchPlaceholder = computed(() => (isHistory.value ? '搜索哈希 / 地址 / 名称 / 币种' : '搜索名称 / 地址'))
 </script>
 
 <template>
@@ -47,7 +53,7 @@ const networkOptions = computed(() => networkStore.networks.map((n) => ({ label:
       <MxButton icon size="sm" aria-label="配置 RPC" @click="emit('network')"><RiSettings3Line size="16" /></MxButton>
     </MxTooltip>
 
-    <MxInput class="top-bar__search" size="sm" :model-value="keyword" placeholder="搜索名称 / 地址" @update:model-value="emit('update:keyword', $event)">
+    <MxInput class="top-bar__search" size="sm" :model-value="keyword" :placeholder="searchPlaceholder" @update:model-value="emit('update:keyword', $event)">
       <template #prefix><RiSearchLine size="14" /></template>
     </MxInput>
 
@@ -62,8 +68,14 @@ const networkOptions = computed(() => networkStore.networks.map((n) => ({ label:
         <MxButton icon size="sm" type="danger" aria-label="一键清空" :disabled="drainDisabled" @click="emit('drain')"><RiEraserLine size="16" /></MxButton>
       </MxTooltip>
       <span class="top-bar__divider" />
-      <MxTooltip content="刷新余额">
-        <MxButton icon size="sm" aria-label="刷新余额" :loading="refreshing" @click="emit('refresh')"><RiRefreshLine size="16" /></MxButton>
+      <MxTooltip :content="isHistory ? '返回钱包列表' : '交易记录'">
+        <MxButton icon size="sm" :type="isHistory ? 'primary' : 'default'" :aria-label="isHistory ? '返回钱包列表' : '交易记录'" @click="emit('update:mode', isHistory ? 'wallets' : 'history')">
+          <RiWallet3Line v-if="isHistory" size="16" />
+          <RiHistoryLine v-else size="16" />
+        </MxButton>
+      </MxTooltip>
+      <MxTooltip :content="isHistory ? '刷新交易状态' : '刷新余额'">
+        <MxButton icon size="sm" :aria-label="isHistory ? '刷新交易状态' : '刷新余额'" :loading="refreshing" @click="emit('refresh')"><RiRefreshLine size="16" /></MxButton>
       </MxTooltip>
       <MxTooltip content="字体">
         <MxButton icon size="sm" aria-label="字体" @click="emit('font')"><RiFontSize size="16" /></MxButton>

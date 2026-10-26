@@ -98,20 +98,83 @@ export async function withRetry(fn, times = 2, delay = 800) {
   throw lastError
 }
 
-function errorText(e) {
+export function errorText(e) {
   return e?.shortMessage || e?.reason || e?.message || String(e)
+}
+
+/** 按 RPC 返回的费率构造交易费用字段：支持 EIP-1559 走 type 2，否则退回 legacy gasPrice */
+function feeOverrides(feeData, gasLimit) {
+  return feeData.maxFeePerGas
+    ? { gasLimit, maxFeePerGas: feeData.maxFeePerGas, maxPriorityFeePerGas: feeData.maxPriorityFeePerGas, type: 2 }
+    : { gasLimit, gasPrice: feeData.gasPrice, type: 0 }
+}
+
+/** 原生币转账的 gas 上限：按 1 wei 估算（避免余额不足导致估算失败），失败时按普通转账 21000 */
+async function estimateNativeGas(provider, from, to) {
+  try {
+    return await provider.estimateGas({ from, to, value: 1n })
+  } catch {
+    return 21000n
+  }
+}
+
+/**
+ * 估算一笔转账的费用
+ * asset：原生币 { native: true } 或 Token { address }
+ * 返回 { gasLimit, price: 单位 gas 最高价, fee: 最高总费用, feeData }
+ */
+export async function estimateTransfer({ network, from, to, asset, amount }) {
+  const provider = getProvider(network)
+  const feeData = await provider.getFeeData()
+  const price = feeData.maxFeePerGas ?? feeData.gasPrice
+  const gasLimit = asset.native
+    ? await estimateNativeGas(provider, from, to)
+    : await new Contract(asset.address, ERC20_ABI, provider).transfer.estimateGas(to, amount, { from })
+  return { gasLimit, price, fee: gasLimit * price, feeData }
+}
+
+/** 广播一笔转账，返回 ethers 的 TransactionResponse（含 hash / nonce / wait） */
+export async function sendTransfer({ network, privateKey, to, asset, amount, gasLimit, feeData }) {
+  const wallet = new Wallet(privateKey, getProvider(network))
+  const overrides = feeOverrides(feeData, gasLimit)
+  if (asset.native) return wallet.sendTransaction({ to, value: amount, ...overrides })
+  return new Contract(asset.address, ERC20_ABI, wallet).transfer(to, amount, overrides)
+}
+
+/**
+ * 等待交易上链。无论成功还是回滚都把回执交给 onSettled(receipt, error)，
+ * 回滚 / 等待出错时继续抛出，由调用方决定如何提示
+ */
+export async function waitTx(tx, onSettled) {
+  try {
+    const receipt = await tx.wait()
+    onSettled?.(receipt, null)
+    return receipt
+  } catch (e) {
+    onSettled?.(e.receipt ?? null, e)
+    throw e
+  }
 }
 
 /**
  * 清空单个钱包：先逐个转出勾选的 Token，再把原生币扣除 gas 后全部转出
  * onLog({ type: 'info' | 'success' | 'error', text })
+ * onSent({ hash, nonce, to, asset, amount }) 每笔广播后调用，返回值作为记录 id 传给 onSettled(id, receipt, error)
  * 返回 { success: 成功笔数, failed: 失败笔数 }
  */
-export async function drainWallet({ network, privateKey, to, tokens, includeNative, onLog }) {
+export async function drainWallet({ network, privateKey, to, tokens, includeNative, onLog, onSent, onSettled }) {
   const provider = getProvider(network)
   const wallet = new Wallet(privateKey, provider)
   const log = (type, text) => onLog?.({ type, text })
   const result = { success: 0, failed: 0 }
+
+  async function broadcastAndWait(tx, asset, amount) {
+    log('info', `${asset.symbol} 已广播 ${tx.hash}`)
+    const id = onSent?.({ hash: tx.hash, nonce: tx.nonce, to, asset, amount })
+    await waitTx(tx, (receipt, error) => onSettled?.(id, receipt, error))
+    log('success', `${asset.symbol} 转出完成`)
+    result.success++
+  }
 
   for (const token of tokens) {
     try {
@@ -121,11 +184,7 @@ export async function drainWallet({ network, privateKey, to, tokens, includeNati
         log('info', `${token.symbol} 余额为 0，跳过`)
         continue
       }
-      const tx = await c.transfer(to, bal)
-      log('info', `${token.symbol} 已广播 ${tx.hash}`)
-      await tx.wait()
-      log('success', `${token.symbol} 转出完成`)
-      result.success++
+      await broadcastAndWait(await c.transfer(to, bal), token, bal)
     } catch (e) {
       result.failed++
       log('error', `${token.symbol} 转出失败：${errorText(e)}`)
@@ -133,33 +192,22 @@ export async function drainWallet({ network, privateKey, to, tokens, includeNati
   }
 
   if (includeNative) {
+    const native = { native: true, symbol: network.symbol, decimals: 18 }
     try {
       const balance = await provider.getBalance(wallet.address)
       if (balance === 0n) {
         log('info', `${network.symbol} 余额为 0，跳过`)
         return result
       }
-      const fee = await provider.getFeeData()
-      let gasLimit = 21000n
-      try {
-        gasLimit = await provider.estimateGas({ from: wallet.address, to, value: 1n })
-      } catch {
-        /* 估算失败时按普通转账 21000 处理 */
-      }
-      const price = fee.maxFeePerGas ?? fee.gasPrice
-      const value = balance - gasLimit * price
+      const feeData = await provider.getFeeData()
+      const gasLimit = await estimateNativeGas(provider, wallet.address, to)
+      const value = balance - gasLimit * (feeData.maxFeePerGas ?? feeData.gasPrice)
       if (value <= 0n) {
         log('info', `${network.symbol} 余额不足以支付 gas，跳过`)
         return result
       }
-      const req = fee.maxFeePerGas
-        ? { to, value, gasLimit, maxFeePerGas: fee.maxFeePerGas, maxPriorityFeePerGas: fee.maxPriorityFeePerGas, type: 2 }
-        : { to, value, gasLimit, gasPrice: fee.gasPrice, type: 0 }
-      const tx = await wallet.sendTransaction(req)
-      log('info', `${network.symbol} 已广播 ${tx.hash}`)
-      await tx.wait()
-      log('success', `${network.symbol} 转出完成`)
-      result.success++
+      const tx = await wallet.sendTransaction({ to, value, ...feeOverrides(feeData, gasLimit) })
+      await broadcastAndWait(tx, native, value)
     } catch (e) {
       result.failed++
       log('error', `${network.symbol} 转出失败：${errorText(e)}`)

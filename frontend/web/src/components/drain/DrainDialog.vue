@@ -5,6 +5,7 @@ import MxInput from '@/components/MxInput.vue'
 import MxButton from '@/components/MxButton.vue'
 import DrainAssetList from './DrainAssetList.vue'
 import DrainProgressList from './DrainProgressList.vue'
+import { useTxStore } from '@/stores/tx'
 import { drainWallet, fetchNativeBalance, fetchTokenBalance, runPool } from '@/utils/chain'
 import { validate, rules } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
@@ -21,6 +22,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'done'])
 
+const txStore = useTxStore()
 const to = ref('')
 const errors = ref({})
 const checked = ref(new Set())
@@ -124,6 +126,8 @@ async function start() {
       tokens: checkedTokens.value,
       includeNative: includeNative.value,
       onLog: (line) => pushLog(w, line),
+      onSent: (info) => txStore.add({ kind: 'drain', network: props.network, from: w.address, ...info }),
+      onSettled: (id, receipt, error) => txStore.settle(id, receipt, error),
     })
     progress[w.id].status = r.failed ? 'failed' : 'done'
     if (r.failed) failedWallets++

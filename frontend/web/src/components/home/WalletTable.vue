@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { RiDeleteBinLine, RiEraserLine, RiPencilLine, RiWallet3Line } from '@remixicon/vue'
+import { RiDeleteBinLine, RiEraserLine, RiPencilLine, RiSendPlaneLine, RiWallet3Line } from '@remixicon/vue'
 import MxCheckbox from '@/components/MxCheckbox.vue'
 import MxAddress from '@/components/MxAddress.vue'
 import MxButton from '@/components/MxButton.vue'
@@ -22,7 +22,7 @@ const props = defineProps({
   filtered: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit', 'drain', 'import', 'create'])
+const emit = defineEmits(['edit', 'drain', 'transfer', 'import', 'create'])
 
 const walletStore = useWalletStore()
 const networkStore = useNetworkStore()
@@ -80,6 +80,9 @@ async function remove(w) {
         <WalletTokenCell :balance="balanceOf(w)" :tokens="networkStore.activeNetwork?.tokens ?? []" />
         <span><MxTag>{{ groupName[w.groupId] || '默认' }}</MxTag></span>
         <span class="wallet-row__actions">
+          <MxTooltip content="转账">
+            <MxButton icon size="xs" type="surface" aria-label="转账" @click="emit('transfer', w)"><RiSendPlaneLine size="14" /></MxButton>
+          </MxTooltip>
           <MxTooltip content="清空此钱包">
             <MxButton icon size="xs" type="surface" aria-label="清空此钱包" @click="emit('drain', w)"><RiEraserLine size="14" /></MxButton>
           </MxTooltip>
@@ -119,7 +122,7 @@ async function remove(w) {
 .wallet-table__head,
 .wallet-row {
   display: grid;
-  grid-template-columns: 28px minmax(80px, 0.9fr) minmax(190px, 1.4fr) minmax(100px, 0.9fr) minmax(150px, 1.3fr) 76px 92px;
+  grid-template-columns: 28px minmax(80px, 0.9fr) minmax(190px, 1.4fr) minmax(100px, 0.9fr) minmax(150px, 1.3fr) 76px 118px;
   align-items: center;
   gap: var(--mx-space-sm);
   padding: 0 var(--mx-space-sm);
