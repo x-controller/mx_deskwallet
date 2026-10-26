@@ -22,6 +22,11 @@ export const useNetworkStore = defineStore('network', () => {
       ...network,
       chainId: Number(network.chainId),
       tokens: (network.tokens ?? []).map((t) => ({ ...t, decimals: Number(t.decimals) })),
+      dexes: (network.dexes ?? []).map((d) =>
+        d.version === 'v3'
+          ? { id: d.id, name: d.name, version: 'v3', router: d.router, quoter: d.quoter, wrappedNative: d.wrappedNative, feeTiers: (d.feeTiers ?? []).map(Number) }
+          : { id: d.id, name: d.name, version: 'v2', router: d.router, wrappedNative: d.wrappedNative },
+      ),
     }
     if (i >= 0) list[i] = normalized
     else list.push(normalized)

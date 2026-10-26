@@ -12,6 +12,7 @@ import EditWalletDialog from '@/components/wallet/EditWalletDialog.vue'
 import TransferDialog from '@/components/wallet/TransferDialog.vue'
 import NetworkDialog from '@/components/network/NetworkDialog.vue'
 import DrainDialog from '@/components/drain/DrainDialog.vue'
+import SwapDialog from '@/components/swap/SwapDialog.vue'
 import FontDialog from '@/components/home/FontDialog.vue'
 import { useVaultStore, DEFAULT_GROUP_ID } from '@/stores/vault'
 import { useWalletStore } from '@/stores/wallet'
@@ -31,10 +32,11 @@ const mode = ref('wallets')
 const activeGroupId = ref('all')
 const keyword = ref('')
 const refreshing = ref(false)
-const dialogs = reactive({ import: false, create: false, edit: false, transfer: false, network: false, drain: false, font: false })
+const dialogs = reactive({ import: false, create: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false })
 const editingWallet = ref(null)
 const transferWallet = ref(null)
 const drainTargets = ref([])
+const swapTargets = ref([])
 
 const visibleWallets = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -55,7 +57,7 @@ const visibleTxs = computed(() => {
     if (activeGroupId.value !== 'all' && from?.groupId !== activeGroupId.value) return false
     if (!kw) return true
     const toWallet = walletByAddress.value[t.to.toLowerCase()]
-    return [t.hash, t.from, t.to, t.asset.symbol, t.networkName, from?.name, toWallet?.name].some((s) => s && s.toLowerCase().includes(kw))
+    return [t.hash, t.from, t.to, t.asset.symbol, t.toAsset?.symbol, t.networkName, from?.name, toWallet?.name].some((s) => s && s.toLowerCase().includes(kw))
   })
 })
 
@@ -63,12 +65,16 @@ const defaultGroupId = computed(() => (activeGroupId.value === 'all' ? DEFAULT_G
 
 const selectedVisible = computed(() => visibleWallets.value.filter((w) => walletStore.selectedIds.has(w.id)))
 const drainCandidates = computed(() => (selectedVisible.value.length ? selectedVisible.value : visibleWallets.value))
-const drainHint = computed(() => {
-  if (!drainCandidates.value.length) return '一键清空（当前没有钱包）'
+/** 顶栏批量操作的提示文案：选中则作用于选中，否则作用于当前列表全部 */
+function batchHint(action) {
+  if (!drainCandidates.value.length) return `${action}（当前没有钱包）`
   return selectedVisible.value.length
-    ? `一键清空：选中的 ${selectedVisible.value.length} 个钱包`
-    : `一键清空：当前列表全部 ${visibleWallets.value.length} 个钱包`
-})
+    ? `${action}：选中的 ${selectedVisible.value.length} 个钱包`
+    : `${action}：当前列表全部 ${visibleWallets.value.length} 个钱包`
+}
+const drainHint = computed(() => batchHint('一键清空'))
+const hasDex = computed(() => (networkStore.activeNetwork?.dexes ?? []).length > 0)
+const swapHint = computed(() => (hasDex.value ? batchHint('兑换') : '当前网络未配置交易所，请先在配置 RPC 里添加'))
 
 async function refreshBalances(addresses = walletStore.wallets.map((w) => w.address)) {
   if (!networkStore.activeNetwork || !addresses.length) return
@@ -105,6 +111,12 @@ function openDrain(targets) {
   if (!networkStore.activeNetwork || !targets.length) return
   drainTargets.value = targets
   dialogs.drain = true
+}
+
+function openSwap(targets) {
+  if (!hasDex.value || !targets.length) return
+  swapTargets.value = targets
+  dialogs.swap = true
 }
 
 function openTransfer(wallet) {
@@ -150,9 +162,12 @@ onBeforeUnmount(() => clearInterval(pollTimer))
       :refreshing="refreshing"
       :drain-hint="drainHint"
       :drain-disabled="!drainCandidates.length || !networkStore.activeNetwork"
+      :swap-hint="swapHint"
+      :swap-disabled="!drainCandidates.length || !hasDex"
       @import="dialogs.import = true"
       @create="dialogs.create = true"
       @drain="openDrain(drainCandidates)"
+      @swap="openSwap(drainCandidates)"
       @network="dialogs.network = true"
       @refresh="refresh"
       @font="dialogs.font = true"
@@ -168,6 +183,7 @@ onBeforeUnmount(() => clearInterval(pollTimer))
         :filtered="walletStore.wallets.length > 0"
         @edit="openEdit"
         @transfer="openTransfer"
+        @swap="openSwap([$event])"
         @drain="openDrain([$event])"
         @import="dialogs.import = true"
         @create="dialogs.create = true"
@@ -183,6 +199,7 @@ onBeforeUnmount(() => clearInterval(pollTimer))
     <NetworkDialog v-model="dialogs.network" />
     <FontDialog v-model="dialogs.font" />
     <DrainDialog v-model="dialogs.drain" :wallets="drainTargets" :network="networkStore.activeNetwork" @done="refreshBalances(drainTargets.map((w) => w.address))" />
+    <SwapDialog v-model="dialogs.swap" :wallets="swapTargets" :network="networkStore.activeNetwork" @done="refreshBalances(swapTargets.map((w) => w.address))" />
   </div>
 </template>
 

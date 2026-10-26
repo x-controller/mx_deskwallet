@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import {
   RiAddLine,
+  RiArrowLeftRightLine,
   RiEraserLine,
   RiFontSize,
   RiHistoryLine,
@@ -29,9 +30,12 @@ const props = defineProps({
   /** 清空按钮的 tooltip 文案（由父级根据选中数量生成） */
   drainHint: { type: String, default: '一键清空' },
   drainDisabled: { type: Boolean, default: false },
+  /** 兑换按钮的 tooltip 文案 */
+  swapHint: { type: String, default: '兑换' },
+  swapDisabled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'network', 'refresh', 'font', 'lock'])
+const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'drain', 'swap', 'network', 'refresh', 'font', 'lock'])
 
 const networkStore = useNetworkStore()
 const networkOptions = computed(() => networkStore.networks.map((n) => ({ label: n.name, value: n.id })))
@@ -63,6 +67,9 @@ const searchPlaceholder = computed(() => (isHistory.value ? '搜索哈希 / 地�
       </MxTooltip>
       <MxTooltip content="创建钱包">
         <MxButton icon size="sm" aria-label="创建钱包" @click="emit('create')"><RiAddLine size="18" /></MxButton>
+      </MxTooltip>
+      <MxTooltip :content="swapHint">
+        <MxButton icon size="sm" aria-label="兑换" :disabled="swapDisabled" @click="emit('swap')"><RiArrowLeftRightLine size="16" /></MxButton>
       </MxTooltip>
       <MxTooltip :content="drainHint">
         <MxButton icon size="sm" type="danger" aria-label="一键清空" :disabled="drainDisabled" @click="emit('drain')"><RiEraserLine size="16" /></MxButton>

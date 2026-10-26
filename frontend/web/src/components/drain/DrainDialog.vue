@@ -1,10 +1,11 @@
 <script setup>
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import MxDialog from '@/components/MxDialog.vue'
 import MxInput from '@/components/MxInput.vue'
 import MxButton from '@/components/MxButton.vue'
 import DrainAssetList from './DrainAssetList.vue'
-import DrainProgressList from './DrainProgressList.vue'
+import WalletProgressList from '@/components/wallet/WalletProgressList.vue'
+import WalletLogPanel from '@/components/wallet/WalletLogPanel.vue'
 import { useTxStore } from '@/stores/tx'
 import { drainWallet, fetchNativeBalance, fetchTokenBalance, runPool } from '@/utils/chain'
 import { validate, rules } from '@/utils/validate'
@@ -29,7 +30,6 @@ const checked = ref(new Set())
 const totals = reactive({})
 const progress = reactive({})
 const logs = ref([])
-const logPanel = ref(null)
 const running = ref(false)
 const finished = ref(false)
 
@@ -98,9 +98,6 @@ function pushLog(wallet, { type, text }) {
   logs.value.push({ id: logs.value.length, name: wallet.name, type, text })
   progress[wallet.id].last = text
   progress[wallet.id].lastType = type
-  nextTick(() => {
-    if (logPanel.value) logPanel.value.scrollTop = logPanel.value.scrollHeight
-  })
 }
 
 async function start() {
@@ -159,16 +156,12 @@ async function start() {
 
       <section class="drain__section">
         <h3 class="drain__heading">钱包进度</h3>
-        <DrainProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" />
       </section>
 
       <section v-if="logs.length" class="drain__section">
         <h3 class="drain__heading">日志</h3>
-        <div ref="logPanel" class="drain__logs">
-          <p v-for="l in logs" :key="l.id" class="drain__log" :class="`is-${l.type}`">
-            <span class="drain__log-name">[{{ l.name }}]</span> {{ l.text }}
-          </p>
-        </div>
+        <WalletLogPanel :logs="logs" />
       </section>
     </div>
 
@@ -197,32 +190,5 @@ async function start() {
   font-size: var(--mx-font-sm);
   font-weight: 500;
   color: var(--mx-color-text-secondary);
-}
-
-.drain__logs {
-  max-height: 140px;
-  overflow-y: auto;
-  padding: var(--mx-space-xs) var(--mx-space-sm);
-  border-radius: var(--mx-radius-sm);
-  background: var(--mx-color-bg);
-  font-size: var(--mx-font-sm);
-}
-
-.drain__log {
-  margin: 0;
-  line-height: 1.6;
-  word-break: break-all;
-}
-
-.drain__log-name {
-  color: var(--mx-color-text-secondary);
-}
-
-.is-success {
-  color: var(--mx-color-info);
-}
-
-.is-error {
-  color: var(--mx-color-danger);
 }
 </style>

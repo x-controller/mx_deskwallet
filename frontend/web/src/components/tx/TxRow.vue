@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { MaxUint256 } from 'ethers'
 import { RiDeleteBinLine } from '@remixicon/vue'
 import MxAddress from '@/components/MxAddress.vue'
 import MxButton from '@/components/MxButton.vue'
@@ -17,10 +18,18 @@ const props = defineProps({
 
 const emit = defineEmits(['remove'])
 
-const KIND = { transfer: '转账', drain: '清空' }
+const KIND = { transfer: '转账', drain: '清空', approve: '授权', swap: '兑换' }
 
 const fromName = computed(() => props.walletNames[props.tx.from.toLowerCase()] || '')
 const toName = computed(() => props.walletNames[props.tx.to.toLowerCase()] || '')
+
+/** 金额列：授权显示额度（无限 / 具体数量），兑换显示 卖出 → 预计买入，其余显示转出数量 */
+const amountText = computed(() => {
+  const t = props.tx
+  if (t.kind === 'approve') return BigInt(t.amount) === MaxUint256 ? '无限额度' : formatAmount(t.amount, t.asset.decimals, 6)
+  return formatAmount(t.amount, t.asset.decimals, 6)
+})
+const amountOutText = computed(() => (props.tx.toAsset && props.tx.amountOut ? `≈ ${formatAmount(props.tx.amountOut, props.tx.toAsset.decimals, 6)}` : ''))
 
 const detail = computed(() => {
   const t = props.tx
@@ -38,10 +47,17 @@ const detail = computed(() => {
     <TxStatusTag :status="tx.status" :detail="detail" />
     <span class="tx-row__time">{{ formatTime(tx.createdAt) }}</span>
     <span><MxTag>{{ KIND[tx.kind] || tx.kind }}</MxTag></span>
-    <span class="tx-row__amount">
-      {{ formatAmount(tx.amount, tx.asset.decimals, 6) }}
-      <span class="tx-row__symbol">{{ tx.asset.symbol }}</span>
-    </span>
+    <MxTooltip :content="amountOutText ? `${amountText} ${tx.asset.symbol} → ${amountOutText} ${tx.toAsset.symbol}` : ''">
+      <span class="tx-row__amount">
+        {{ amountText }}
+        <span class="tx-row__symbol">{{ tx.asset.symbol }}</span>
+        <template v-if="amountOutText">
+          <span class="tx-row__symbol">→</span>
+          {{ amountOutText }}
+          <span class="tx-row__symbol">{{ tx.toAsset.symbol }}</span>
+        </template>
+      </span>
+    </MxTooltip>
     <span class="tx-row__party">
       <span v-if="fromName" class="tx-row__name" :title="fromName">{{ fromName }}</span>
       <MxAddress :address="tx.from" :head="6" :tail="4" />

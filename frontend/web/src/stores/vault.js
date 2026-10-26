@@ -16,6 +16,18 @@ function createDefaultData() {
   }
 }
 
+/** 旧版本金库缺的字段按预设补齐（网络的交易所列表等） */
+function migrate(data) {
+  const presetById = Object.fromEntries(NETWORK_PRESETS.map((p) => [p.id, p]))
+  data.networks.forEach((n) => {
+    if (!n.dexes) n.dexes = structuredClone(presetById[n.id]?.dexes ?? [])
+    n.dexes.forEach((d) => {
+      if (!d.version) d.version = 'v2'
+    })
+  })
+  return data
+}
+
 /**
  * 本地金库：所有业务数据（钱包 / 分组 / 网络 / 交易记录）加密保存在同一个文件里，
  * 解锁后在内存中以响应式对象形式提供给各业务 store
@@ -58,7 +70,7 @@ export const useVaultStore = defineStore('vault', () => {
     }
     key = k
     salt = s
-    data.value = { ...createDefaultData(), ...plain }
+    data.value = migrate({ ...createDefaultData(), ...plain })
     status.value = 'unlocked'
   }
 

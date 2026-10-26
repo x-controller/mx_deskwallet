@@ -21,8 +21,8 @@ function fromReceipt(receipt) {
 
 /**
  * 交易记录：本应用发出的每一笔链上交易，随金库加密落盘
- * 记录结构：{ id, hash, kind: transfer | drain, networkId, networkName, chainId, nativeSymbol,
- *   from, to, nonce, asset: { symbol, decimals, address|null }, amount(十进制字符串),
+ * 记录结构：{ id, hash, kind: transfer | drain | approve | swap, networkId, networkName, chainId, nativeSymbol,
+ *   from, to, nonce, asset: { symbol, decimals, address|null }, amount(十进制字符串), toAsset, amountOut,
  *   status: pending | success | failed | dropped, createdAt, settledAt, blockNumber, gasUsed, fee, error }
  */
 export const useTxStore = defineStore('tx', () => {
@@ -34,8 +34,14 @@ export const useTxStore = defineStore('tx', () => {
 
   const find = (id) => vault.data.txs.find((t) => t.id === id)
 
-  /** 广播成功后立即登记一条待确认记录，返回记录 id */
-  function add({ kind, network, from, to, hash, nonce, asset, amount }) {
+  /** 资产快照：原生币 address 为 null */
+  const snapshotAsset = (a) => (a ? { symbol: a.symbol, decimals: a.decimals, address: a.native ? null : a.address } : null)
+
+  /**
+   * 广播成功后立即登记一条待确认记录，返回记录 id
+   * kind：transfer | drain | approve | swap；swap 额外带 toAsset / amountOut（报价）
+   */
+  function add({ kind, network, from, to, hash, nonce, asset, amount, toAsset = null, amountOut = null }) {
     const record = {
       id: uid(),
       hash,
@@ -47,8 +53,10 @@ export const useTxStore = defineStore('tx', () => {
       from,
       to,
       nonce,
-      asset: { symbol: asset.symbol, decimals: asset.decimals, address: asset.native ? null : asset.address },
+      asset: snapshotAsset(asset),
       amount: amount.toString(),
+      toAsset: snapshotAsset(toAsset),
+      amountOut: amountOut === null ? '' : amountOut.toString(),
       status: 'pending',
       createdAt: Date.now(),
       settledAt: 0,

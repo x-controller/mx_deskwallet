@@ -7,6 +7,7 @@ import MxButton from '@/components/MxButton.vue'
 import MxTooltip from '@/components/MxTooltip.vue'
 import MxTag from '@/components/MxTag.vue'
 import NetworkTokenList from './NetworkTokenList.vue'
+import NetworkDexList from './NetworkDexList.vue'
 import { useNetworkStore } from '@/stores/network'
 import { detectChainId } from '@/utils/chain'
 import { validate, rules } from '@/utils/validate'
@@ -21,7 +22,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const networkStore = useNetworkStore()
 
-const emptyForm = () => ({ id: crypto.randomUUID(), name: '', rpcUrl: '', chainId: '', symbol: '', tokens: [] })
+const emptyForm = () => ({ id: crypto.randomUUID(), name: '', rpcUrl: '', chainId: '', symbol: '', tokens: [], dexes: [] })
 
 /** 当前编辑的网络 id；新建时为 'new' */
 const selectedId = ref('')
@@ -33,7 +34,8 @@ const detecting = ref(false)
 const isNew = computed(() => selectedId.value === 'new')
 
 function load(network) {
-  Object.assign(form, JSON.parse(JSON.stringify(network)))
+  // 先铺一层空表单，避免旧网络缺字段时残留上一个网络的值
+  Object.assign(form, emptyForm(), JSON.parse(JSON.stringify(network)))
   form.chainId = String(network.chainId ?? '')
   errors.value = {}
 }
@@ -153,6 +155,10 @@ async function remove() {
         <div class="network__row">
           <span class="network__label">Token</span>
           <NetworkTokenList v-model="form.tokens" :network="form" class="network__field" />
+        </div>
+        <div class="network__row">
+          <span class="network__label">交易所</span>
+          <NetworkDexList v-model="form.dexes" :network="form" class="network__field" />
         </div>
       </form>
     </div>
