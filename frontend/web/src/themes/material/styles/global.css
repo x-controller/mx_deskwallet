@@ -1,0 +1,61 @@
+/* Material 3 风格的全局外观，全部挂在 html[data-style="material"] 下 */
+html[data-style="material"] body {
+  font-family: var(--md-ref-typeface-plain);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+}
+
+html[data-style="material"] ::selection {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+html[data-style="material"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html[data-style="material"] ::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html[data-style="material"] ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md-sys-color-outline);
+}
+
+html[data-style="material"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 涟漪（v-ripple 动态插入，不能用 scoped） */
+html[data-style="material"] .md-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: var(--md-sys-state-pressed-opacity);
+  transform: scale(0);
+  pointer-events: none;
+}
+
+/* 字阶工具类：只在 Material 风格下有意义 */
+html[data-style="material"] .md-display-small { font-size: var(--md-sys-typescale-display-small-size); line-height: var(--md-sys-typescale-display-small-line-height); font-weight: var(--md-sys-typescale-weight-regular); letter-spacing: 0; }
+html[data-style="material"] .md-headline-medium { font-size: var(--md-sys-typescale-headline-medium-size); line-height: var(--md-sys-typescale-headline-medium-line-height); font-weight: var(--md-sys-typescale-weight-regular); letter-spacing: 0; }
+html[data-style="material"] .md-headline-small { font-size: var(--md-sys-typescale-headline-small-size); line-height: var(--md-sys-typescale-headline-small-line-height); font-weight: var(--md-sys-typescale-weight-regular); letter-spacing: 0; }
+html[data-style="material"] .md-title-large { font-size: var(--md-sys-typescale-title-large-size); line-height: var(--md-sys-typescale-title-large-line-height); font-weight: var(--md-sys-typescale-weight-regular); letter-spacing: 0; }
+html[data-style="material"] .md-title-medium { font-size: var(--md-sys-typescale-title-medium-size); line-height: var(--md-sys-typescale-title-medium-line-height); font-weight: var(--md-sys-typescale-weight-medium); letter-spacing: var(--md-sys-typescale-title-medium-tracking); }
+html[data-style="material"] .md-title-small { font-size: var(--md-sys-typescale-title-small-size); line-height: var(--md-sys-typescale-title-small-line-height); font-weight: var(--md-sys-typescale-weight-medium); letter-spacing: var(--md-sys-typescale-title-small-tracking); }
+html[data-style="material"] .md-body-large { font-size: var(--md-sys-typescale-body-large-size); line-height: var(--md-sys-typescale-body-large-line-height); letter-spacing: var(--md-sys-typescale-body-large-tracking); }
+html[data-style="material"] .md-body-medium { font-size: var(--md-sys-typescale-body-medium-size); line-height: var(--md-sys-typescale-body-medium-line-height); letter-spacing: var(--md-sys-typescale-body-medium-tracking); }
+html[data-style="material"] .md-body-small { font-size: var(--md-sys-typescale-body-small-size); line-height: var(--md-sys-typescale-body-small-line-height); letter-spacing: var(--md-sys-typescale-body-small-tracking); }
+html[data-style="material"] .md-label-large { font-size: var(--md-sys-typescale-label-large-size); line-height: var(--md-sys-typescale-label-large-line-height); font-weight: var(--md-sys-typescale-weight-medium); letter-spacing: var(--md-sys-typescale-label-large-tracking); }
+html[data-style="material"] .md-label-medium { font-size: var(--md-sys-typescale-label-medium-size); line-height: var(--md-sys-typescale-label-medium-line-height); font-weight: var(--md-sys-typescale-weight-medium); letter-spacing: var(--md-sys-typescale-label-medium-tracking); }
+html[data-style="material"] .md-label-small { font-size: var(--md-sys-typescale-label-small-size); line-height: var(--md-sys-typescale-label-small-line-height); font-weight: var(--md-sys-typescale-weight-medium); letter-spacing: var(--md-sys-typescale-label-small-tracking); }
+html[data-style="material"] .md-on-surface-variant { color: var(--md-sys-color-on-surface-variant); }
+html[data-style="material"] .md-error-text { color: var(--md-sys-color-error); }
+html[data-style="material"] .md-mono { font-family: var(--md-ref-typeface-mono); letter-spacing: 0; }

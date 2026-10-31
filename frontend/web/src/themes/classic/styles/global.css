@@ -1,0 +1,21 @@
+/* 经典风格的全局外观，全部挂在 html[data-style="classic"] 下，不影响其他风格 */
+html[data-style="classic"] body {
+  font-family: var(--mx-font-family);
+  font-size: var(--mx-font-md);
+  color: var(--mx-color-text);
+  background: var(--mx-color-page);
+}
+
+html[data-style="classic"] ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html[data-style="classic"] ::-webkit-scrollbar-thumb {
+  background: var(--mx-color-bg-active);
+  border-radius: var(--mx-radius-full);
+}
+
+html[data-style="classic"] ::-webkit-scrollbar-track {
+  background: transparent;
+}

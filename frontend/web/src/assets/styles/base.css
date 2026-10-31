@@ -1,0 +1,25 @@
+/* 与风格无关的全局重置，两套界面风格共用；字体 / 颜色 / 滚动条等外观由各自主题的 global.css 按 html[data-style] 定义 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}

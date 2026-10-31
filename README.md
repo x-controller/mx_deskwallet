@@ -6,7 +6,7 @@
 
 ## 目录
 
-- `frontend/web/` 前端（Vite + Vue 3 + Pinia，Mx 前缀自研组件，`src/assets/styles/tokens.css` 为全站 design tokens）
+- `frontend/web/` 前端（Vite + Vue 3 + Pinia）：`src/composables/` 业务逻辑；`src/themes/classic/` 经典风格（Mx 前缀自研组件，`styles/tokens.css` 为 design tokens）；`src/themes/material/` Material 3 风格（Md 前缀组件，`--md-sys-*` token，种子色动态配色，Roboto + Material Symbols）
 - `src-tauri/` Tauri 壳（store / http / clipboard / updater 四个插件，自定义命令只有更新，src/update.rs）
 - `todo/` 按版本维护的待办清单
 
@@ -18,6 +18,12 @@ pnpm tauri dev      # 桌面调试（自动起 Vite）
 pnpm dev            # 仅浏览器调试（金库退化为 localStorage，RPC 走浏览器 fetch）
 pnpm tauri build    # 产出 NSIS 安装包：src-tauri/target/release/bundle/nsis/
 ```
+
+## 界面风格
+
+- 内置两套完全独立的界面：**经典**（等宽字体、灰色系、紧凑面板）和 **Material 3**（Google Material Design 3：动态配色、Roboto、Material Symbols、状态层与涟漪）。两套只共用业务逻辑（`src/composables/`）、stores 和 utils，界面代码各写一份
+- 经典风格顶栏的调色板按钮切到 Material 3；Material 3 顶栏「外观」弹框里可以切回经典、切换浅 / 深色、从预设或自定义十六进制挑**种子色**（整套配色按 M3 算法从种子色生成）。风格、配色、种子色都记在本机 localStorage
+- 经典风格的「字体」弹框只影响经典风格；Material 3 固定使用 Roboto（已打包 latin 字重，中文回退系统字体）
 
 ## 数据与安全
 
