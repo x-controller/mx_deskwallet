@@ -18,15 +18,15 @@ export function useDappProposal(props) {
   const metadata = computed(() => props.proposal.params?.proposer?.metadata ?? null)
   const requiredChains = computed(() => (props.proposal.params?.requiredNamespaces?.eip155?.chains ?? []).map(chainIdOf))
   const optionalChains = computed(() => (props.proposal.params?.optionalNamespaces?.eip155?.chains ?? []).map(chainIdOf).filter((c) => !requiredChains.value.includes(c)))
-  const knownChain = (c) => networkStore.networks.some((n) => n.chainId === c)
-  const networkName = (c) => networkStore.networks.find((n) => n.chainId === c)?.name ?? `Chain ${c}`
+  const knownChain = (c) => networkStore.evmNetworks.some((n) => n.chainId === c)
+  const networkName = (c) => networkStore.evmNetworks.find((n) => n.chainId === c)?.name ?? `Chain ${c}`
   const missingRequired = computed(() => requiredChains.value.filter((c) => !knownChain(c)))
   const isScam = computed(() => !!props.proposal.verifyContext?.verified?.isScam)
 
   /** dApp 没指定任何链时，让用户从自己配置的网络里挑 */
   const chainChoices = computed(() => {
     const listed = [...requiredChains.value, ...optionalChains.value]
-    return listed.length ? listed : networkStore.networks.map((n) => n.chainId)
+    return listed.length ? listed : networkStore.evmNetworks.map((n) => n.chainId)
   })
 
   const canApprove = computed(() => !submitting.value && !missingRequired.value.length && selectedWallets.value.size > 0 && selectedChains.value.size > 0)

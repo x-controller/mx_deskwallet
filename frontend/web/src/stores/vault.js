@@ -23,10 +23,15 @@ function createDefaultData() {
 function migrate(data) {
   const presetById = Object.fromEntries(NETWORK_PRESETS.map((p) => [p.id, p]))
   data.networks.forEach((n) => {
+    if (!n.type) n.type = 'evm'
     if (!n.dexes) n.dexes = structuredClone(presetById[n.id]?.dexes ?? [])
     n.dexes.forEach((d) => {
       if (!d.version) d.version = 'v2'
     })
+  })
+  // 新增的预设网络（如 Tron）按 id 补进旧金库
+  NETWORK_PRESETS.forEach((p) => {
+    if (!data.networks.some((n) => n.id === p.id)) data.networks.push(structuredClone(p))
   })
   if (!data.settings) data.settings = {}
   if (!data.settings.wcProjectId) data.settings.wcProjectId = DEFAULT_WC_PROJECT_ID

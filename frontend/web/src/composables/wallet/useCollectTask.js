@@ -3,7 +3,7 @@ import { parseUnits } from 'ethers'
 import { useWalletStore } from '@/stores/wallet'
 import { useTxStore } from '@/stores/tx'
 import { trackBusy } from '@/utils/busy'
-import { collectFromWallet, runPool } from '@/utils/chain'
+import { collectFromWallet, runPool, addressPlaceholder } from '@/utils/chain'
 import { formatAmount } from '@/utils/format'
 import { validate, rules } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
@@ -32,6 +32,7 @@ export function useCollectTask(props, emit) {
   const assets = computed(() => networkAssets(props.network))
   const asset = computed(() => assets.value.find((a) => a.key === assetKey.value) ?? assets.value[0] ?? null)
   const locked = computed(() => running.value || finished.value)
+  const toPlaceholder = computed(() => addressPlaceholder(props.network))
 
   /** 各钱包当前资产余额（来自余额缓存，打开时刷新一次） */
   const balanceLoading = computed(() => props.wallets.some((w) => walletStore.getBalance(props.network?.id, w.address)?.loading))
@@ -121,7 +122,7 @@ export function useCollectTask(props, emit) {
   })
 
   function validateForm() {
-    const errs = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.address()] })
+    const errs = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.chainAddress(() => props.network)] })
     if (!allMode.value) {
       if (!amount.value.trim()) errs.amount = '请输入数量，或选择全部余额'
       else if (parsedAmount.value === null) errs.amount = `数量格式不正确（最多 ${asset.value.decimals} 位小数）`
@@ -172,6 +173,6 @@ export function useCollectTask(props, emit) {
   return {
     to, assetKey, amount, allMode, errors, running, finished, locked,
     asset, assets, assetOptions, balanceLoading, summary, totalText, shortCount,
-    progress, logs, canStart, start,
+    progress, logs, canStart, start, toPlaceholder,
   }
 }

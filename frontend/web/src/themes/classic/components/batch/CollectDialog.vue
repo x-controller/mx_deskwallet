@@ -20,7 +20,7 @@ const emit = defineEmits(['update:modelValue', 'done'])
 
 const {
   to, assetKey, amount, allMode, errors, running, finished, locked,
-  asset, assetOptions, balanceLoading, summary, totalText, shortCount, progress, logs, canStart, start,
+  asset, assetOptions, balanceLoading, summary, totalText, shortCount, progress, logs, canStart, start, toPlaceholder,
 } = useCollectTask(props, emit)
 </script>
 
@@ -36,7 +36,7 @@ const {
       <div class="collect__row">
         <span class="collect__label">接收</span>
         <div class="collect__field">
-          <MxInput v-model="to" size="sm" placeholder="接收地址 0x..." :error="errors.to" :disabled="locked" autofocus />
+          <MxInput v-model="to" size="sm" :placeholder="`接收地址 ${toPlaceholder}`" :error="errors.to" :disabled="locked" autofocus />
         </div>
       </div>
 
@@ -80,7 +80,7 @@ const {
 
       <section class="collect__section">
         <h3 class="collect__heading">钱包进度</h3>
-        <WalletProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" :network="network" />
       </section>
 
       <section v-if="logs.length" class="collect__section">

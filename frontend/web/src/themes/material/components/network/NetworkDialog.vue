@@ -1,6 +1,7 @@
 <script setup>
 import MdDialog from '@/themes/material/components/MdDialog.vue'
 import MdTextField from '@/themes/material/components/MdTextField.vue'
+import MdSelect from '@/themes/material/components/MdSelect.vue'
 import MdButton from '@/themes/material/components/MdButton.vue'
 import MdIcon from '@/themes/material/components/MdIcon.vue'
 import MdIconButton from '@/themes/material/components/MdIconButton.vue'
@@ -17,7 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const { networkStore, selectedId, form, errors, saving, detecting, isNew, select, createNew, detect, save, remove } = useNetworkForm(props)
+const { networkStore, selectedId, form, errors, saving, detecting, isNew, isTron, typeOptions, rpcPlaceholder, detectHint, symbolPlaceholder, select, createNew, detect, save, remove } = useNetworkForm(props)
 </script>
 
 <template>
@@ -29,7 +30,7 @@ const { networkStore, selectedId, form, errors, saving, detecting, isNew, select
           {{ n.name }}
           <template #trailing>
             <MdChip v-if="n.id === networkStore.activeNetworkId" tone="primary">当前</MdChip>
-            <span v-else class="network__chain">{{ n.chainId }}</span>
+            <span v-else class="network__chain">{{ n.type === 'tron' ? 'Tron' : n.chainId }}</span>
           </template>
         </MdNavItem>
         <MdNavItem dense :active="isNew" @click="createNew">
@@ -39,23 +40,25 @@ const { networkStore, selectedId, form, errors, saving, detecting, isNew, select
       </aside>
 
       <form class="network__form" @submit.prevent="save">
+        <MdSelect v-model="form.type" dense label="链类型" :options="typeOptions" :disabled="!isNew" />
         <MdTextField v-model="form.name" dense label="名称" placeholder="如 Ethereum" :error="errors.name" />
-        <MdTextField v-model="form.rpcUrl" dense label="RPC 地址" placeholder="https://..." :error="errors.rpcUrl" mono>
+        <MdTextField v-model="form.rpcUrl" dense :label="isTron ? '节点地址' : 'RPC 地址'" :placeholder="rpcPlaceholder" :error="errors.rpcUrl" mono>
           <template #trailing>
-            <MdTooltip content="检测 RPC 并读取 Chain ID">
+            <MdTooltip :content="detectHint">
               <MdIconButton size="sm" aria-label="检测 RPC" :loading="detecting" @click="detect"><MdIcon name="radar" /></MdIconButton>
             </MdTooltip>
           </template>
         </MdTextField>
+        <MdTextField v-if="isTron" v-model="form.apiKey" dense label="TronGrid API Key（可选）" supporting-text="不填也能用，但受公共限流" mono />
         <div class="network__inline">
-          <MdTextField v-model="form.chainId" dense type="number" label="Chain ID" :error="errors.chainId" />
-          <MdTextField v-model="form.symbol" dense label="原生币符号" placeholder="ETH" :maxlength="10" :error="errors.symbol" />
+          <MdTextField v-if="!isTron" v-model="form.chainId" dense type="number" label="Chain ID" :error="errors.chainId" />
+          <MdTextField v-model="form.symbol" dense label="原生币符号" :placeholder="symbolPlaceholder" :maxlength="10" :error="errors.symbol" />
         </div>
         <section class="network__section">
           <h3 class="network__heading md-title-small">Token</h3>
           <NetworkTokenList v-model="form.tokens" :network="form" />
         </section>
-        <section class="network__section">
+        <section v-if="!isTron" class="network__section">
           <h3 class="network__heading md-title-small">交易所</h3>
           <NetworkDexList v-model="form.dexes" :network="form" />
         </section>

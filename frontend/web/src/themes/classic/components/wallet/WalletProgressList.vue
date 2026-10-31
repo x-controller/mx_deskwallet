@@ -3,12 +3,17 @@ import MxTag from '@/themes/classic/components/MxTag.vue'
 import MxSpinner from '@/themes/classic/components/MxSpinner.vue'
 import MxTooltip from '@/themes/classic/components/MxTooltip.vue'
 import { shortAddress } from '@/utils/format'
+import { chainAddress } from '@/utils/chain'
 
-defineProps({
+const props = defineProps({
   wallets: { type: Array, default: () => [] },
   /** walletId → { status: pending | running | done | failed, last: string } */
   progress: { type: Object, default: () => ({}) },
+  /** 传入时钱包地址按该网络的写法显示（Tron 显示 T 地址）；不传则原样显示 */
+  network: { type: Object, default: null },
 })
+
+const displayAddress = (w) => (props.network ? chainAddress(props.network, w.address) : w.address)
 
 const STATUS = {
   pending: { type: 'default', text: '待执行' },
@@ -22,7 +27,7 @@ const STATUS = {
   <div class="progress-list">
     <div v-for="w in wallets" :key="w.id" class="progress-item">
       <span class="progress-item__name" :title="w.name">{{ w.name }}</span>
-      <span class="progress-item__address">{{ shortAddress(w.address, 8, 6) }}</span>
+      <span class="progress-item__address">{{ shortAddress(displayAddress(w), 8, 6) }}</span>
       <MxTag :type="STATUS[progress[w.id]?.status || 'pending'].type">
         <MxSpinner v-if="progress[w.id]?.status === 'running'" :size="10" />
         {{ STATUS[progress[w.id]?.status || 'pending'].text }}

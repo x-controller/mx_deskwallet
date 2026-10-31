@@ -21,6 +21,9 @@ const WPOL = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'
 const v2 = (id, name, router, wrappedNative) => ({ id, name, version: 'v2', router, wrappedNative })
 const v3 = (id, name, router, quoter, wrappedNative, feeTiers) => ({ id, name, version: 'v3', router, quoter, wrappedNative, feeTiers: [...feeTiers] })
 
+/** Tron 走 HTTP 节点接口（TronGrid 或自建全节点），没有 EVM chainId，原生币 6 位小数；apiKey 为 TronGrid 的 API Key，可选 */
+const tron = (id, name, rpcUrl, usdt) => ({ id, type: 'tron', name, rpcUrl, apiKey: '', chainId: 0, symbol: 'TRX', decimals: 6, tokens: [{ address: usdt, symbol: 'USDT', decimals: 6 }], dexes: [] })
+
 export const NETWORK_PRESETS = [
   {
     id: 'ethereum',
@@ -103,4 +106,6 @@ export const NETWORK_PRESETS = [
       v2('uniswap-v2', 'Uniswap V2', '0xedf6066a2b290C185783862C7F4776A2C8077AD1', WPOL),
     ],
   },
+  tron('tron', 'Tron', 'https://api.trongrid.io', 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'),
+  tron('tron-nile', 'Tron Nile 测试网', 'https://nile.trongrid.io', 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf'),
 ]

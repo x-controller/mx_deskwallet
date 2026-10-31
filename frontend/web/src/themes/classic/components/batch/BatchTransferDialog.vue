@@ -24,7 +24,7 @@ const emit = defineEmits(['update:modelValue', 'done'])
 const {
   fromId, assetKey, text, defaultAmount, errors, running, finished, locked,
   asset, walletOptions, assetOptions, balanceLoading, assetBalance,
-  items, lineErrorText, totalText, estimate, feeTotalText, progress, progressRows, canStart, fillable, fillRecipients, start,
+  items, lineErrorText, totalText, estimate, feeTotalText, progress, progressRows, canStart, fillable, fillRecipients, start, toPlaceholder,
 } = useBatchTransfer(props, emit)
 </script>
 
@@ -68,7 +68,7 @@ const {
       <div class="batch__row">
         <span class="batch__label">收款</span>
         <div class="batch__field">
-          <MxInput v-model="text" :rows="7" :placeholder="`每行一个：地址 金额，用空格或逗号分隔\n0x1234…abcd 10.5\n没写金额的行使用下方统一金额`" :error="errors.text || lineErrorText" :disabled="locked" autofocus />
+          <MxInput v-model="text" :rows="7" :placeholder="`每行一个：地址 金额，用空格或逗号分隔\n${toPlaceholder.replace('...', '1234…abcd')} 10.5\n没写金额的行使用下方统一金额`" :error="errors.text || lineErrorText" :disabled="locked" autofocus />
           <div class="batch__tools">
             <MxInput v-model="defaultAmount" size="sm" placeholder="统一金额（可选）" :error="errors.defaultAmount" :disabled="locked" class="batch__default">
               <template #suffix><span class="batch__symbol">{{ asset?.symbol }}</span></template>

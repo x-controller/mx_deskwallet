@@ -7,6 +7,8 @@ import { useTxStore } from '@/stores/tx'
 import { useDappStore } from '@/stores/dapp'
 import { useUpdateStore } from '@/stores/update'
 import { message } from '@/utils/message'
+import { isTron } from '@/utils/chain'
+import { addressKey } from '@/utils/validate'
 
 const PENDING_POLL_MS = 10000
 /** 启动后隔多久再检查一次更新 */
@@ -54,7 +56,7 @@ export function useHomePage() {
       const from = walletByAddress.value[t.from.toLowerCase()]
       if (activeGroupId.value !== 'all' && from?.groupId !== activeGroupId.value) return false
       if (!kw) return true
-      const toWallet = walletByAddress.value[t.to.toLowerCase()]
+      const toWallet = walletByAddress.value[addressKey(t.to)]
       return [t.hash, t.from, t.to, t.asset.symbol, t.toAsset?.symbol, t.networkName, from?.name, toWallet?.name].some((s) => s && s.toLowerCase().includes(kw))
     })
   })
@@ -77,7 +79,7 @@ export function useHomePage() {
   }
   const drainHint = computed(() => scopeHint('清空'))
   const hasDex = computed(() => (networkStore.activeNetwork?.dexes ?? []).length > 0)
-  const swapHint = computed(() => (hasDex.value ? scopeHint('兑换') : '当前网络未配置交易所，请先在配置 RPC 里添加'))
+  const swapHint = computed(() => (hasDex.value ? scopeHint('兑换') : isTron(networkStore.activeNetwork) ? 'Tron 网络暂不支持兑换' : '当前网络未配置交易所，请先在配置 RPC 里添加'))
   const drainDisabled = computed(() => !drainCandidates.value.length || !networkStore.activeNetwork)
   const swapDisabled = computed(() => !drainCandidates.value.length || !hasDex.value)
   const collectHint = computed(() => scopeHint('转账'))
@@ -173,7 +175,7 @@ export function useHomePage() {
   const refreshSwap = () => refreshBalances(swapTargets.value.map((w) => w.address))
   const refreshCollect = () => refreshBalances(collectTargets.value.map((w) => w.address))
   /** 批量转账只刷新转出钱包和收款方里属于本金库的地址 */
-  const refreshBatch = ({ from, recipients }) => refreshBalances([...new Set([from, ...recipients].map((a) => walletByAddress.value[a.toLowerCase()]?.address).filter(Boolean))])
+  const refreshBatch = ({ from, recipients }) => refreshBalances([...new Set([from, ...recipients].map((a) => walletByAddress.value[addressKey(a)]?.address).filter(Boolean))])
 
   watch(
     () => networkStore.activeNetworkId,

@@ -3,6 +3,7 @@ import { useWalletStore } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
 import { useUpdateStore } from '@/stores/update'
+import { isTron } from '@/utils/chain'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
 
@@ -16,6 +17,12 @@ export function useStatusBar(props) {
   const isHistory = computed(() => props.mode === 'history')
   const selectedCount = computed(() => walletStore.selectedIds.size)
   const groupOptions = computed(() => walletStore.groups.map((g) => ({ label: g.name, value: g.id })))
+  /** 状态栏右侧的链标识：EVM 显示 Chain ID，Tron 显示链类型 */
+  const chainLabel = computed(() => {
+    const n = networkStore.activeNetwork
+    if (!n) return ''
+    return isTron(n) ? 'Tron' : `Chain ID ${n.chainId}`
+  })
 
   async function moveTo(groupId) {
     const ids = [...walletStore.selectedIds]
@@ -52,5 +59,5 @@ export function useStatusBar(props) {
     }
   }
 
-  return { walletStore, networkStore, txStore, updateStore, isHistory, selectedCount, groupOptions, moveTo, removeSelected, clearTxs, checkUpdate }
+  return { walletStore, networkStore, txStore, updateStore, isHistory, selectedCount, groupOptions, chainLabel, moveTo, removeSelected, clearTxs, checkUpdate }
 }

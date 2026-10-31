@@ -1,7 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useTxStore } from '@/stores/tx'
 import { trackBusy } from '@/utils/busy'
-import { drainWallet, fetchNativeBalance, fetchTokenBalance, runPool } from '@/utils/chain'
+import { drainWallet, fetchNativeBalance, fetchTokenBalance, runPool, nativeDecimals, addressPlaceholder } from '@/utils/chain'
 import { validate, rules } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
@@ -45,7 +45,7 @@ export function useDrainTask(props, emit) {
     if (!props.network) return []
     return [
       ...props.network.tokens.map((t) => ({ key: t.address.toLowerCase(), ...t })),
-      { key: NATIVE_KEY, symbol: props.network.symbol, decimals: 18, native: true },
+      { key: NATIVE_KEY, symbol: props.network.symbol, decimals: nativeDecimals(props.network), native: true },
     ]
   })
 
@@ -53,6 +53,7 @@ export function useDrainTask(props, emit) {
   const includeNative = computed(() => checked.value.has(NATIVE_KEY))
   const canStart = computed(() => !running.value && !finished.value && checked.value.size > 0 && props.wallets.length > 0)
   const locked = computed(() => running.value || finished.value)
+  const toPlaceholder = computed(() => addressPlaceholder(props.network))
 
   function reset() {
     to.value = ''
@@ -100,7 +101,7 @@ export function useDrainTask(props, emit) {
   }
 
   async function start() {
-    errors.value = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.address()] })
+    errors.value = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.chainAddress(() => props.network)] })
     if (Object.keys(errors.value).length) return
     const target = to.value.trim()
     const names = [...checkedTokens.value.map((t) => t.symbol), ...(includeNative.value ? [props.network.symbol] : [])]
@@ -136,5 +137,5 @@ export function useDrainTask(props, emit) {
     emit('done')
   }
 
-  return { to, errors, checked, totals, progress, logs, running, finished, locked, assets, canStart, toggle, start }
+  return { to, errors, checked, totals, progress, logs, running, finished, locked, assets, canStart, toggle, start, toPlaceholder }
 }

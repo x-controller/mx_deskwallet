@@ -16,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'done'])
 
-const { to, errors, checked, totals, progress, logs, running, finished, assets, canStart, toggle, start } = useDrainTask(props, emit)
+const { to, errors, checked, totals, progress, logs, running, finished, assets, canStart, toggle, start, toPlaceholder } = useDrainTask(props, emit)
 </script>
 
 <template>
@@ -28,7 +28,7 @@ const { to, errors, checked, totals, progress, logs, running, finished, assets, 
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="drain">
-      <MxInput v-model="to" size="sm" placeholder="接收地址 0x..." :error="errors.to" :disabled="running || finished" autofocus />
+      <MxInput v-model="to" size="sm" :placeholder="`接收地址 ${toPlaceholder}`" :error="errors.to" :disabled="running || finished" autofocus />
 
       <section class="drain__section">
         <h3 class="drain__heading">清空哪些资产</h3>
@@ -37,7 +37,7 @@ const { to, errors, checked, totals, progress, logs, running, finished, assets, 
 
       <section class="drain__section">
         <h3 class="drain__heading">钱包进度</h3>
-        <WalletProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" :network="network" />
       </section>
 
       <section v-if="logs.length" class="drain__section">

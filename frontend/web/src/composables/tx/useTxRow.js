@@ -1,6 +1,8 @@
 import { computed } from 'vue'
 import { MaxUint256 } from 'ethers'
 import { formatAmount, formatTime } from '@/utils/format'
+import { toTronAddress } from '@/utils/tron'
+import { addressKey } from '@/utils/validate'
 
 export const TX_KIND = { transfer: '转账', batch: '批量', collect: '聚合', drain: '清空', approve: '授权', swap: '兑换', dapp: 'dApp' }
 
@@ -14,8 +16,10 @@ export const TX_STATUS = {
 /** 交易记录行的展示文案：双方名称、金额、悬停明细。props 需要 tx、walletNames */
 export function useTxRow(props) {
   const fromName = computed(() => props.walletNames[props.tx.from.toLowerCase()] || '')
-  const toName = computed(() => props.walletNames[props.tx.to.toLowerCase()] || '')
+  const toName = computed(() => props.walletNames[addressKey(props.tx.to)] || '')
   const kindText = computed(() => TX_KIND[props.tx.kind] || props.tx.kind)
+  /** 发送方按记录所在链的写法展示（金库里统一存 0x，Tron 记录显示 T 地址） */
+  const fromAddress = computed(() => (props.tx.chainType === 'tron' ? toTronAddress(props.tx.from) : props.tx.from))
 
   /** 金额列：授权显示额度（无限 / 具体数量），兑换显示 卖出 → 预计买入，其余显示转出数量 */
   const amountText = computed(() => {
@@ -30,12 +34,12 @@ export function useTxRow(props) {
     const t = props.tx
     const lines = []
     if (t.note) lines.push(t.note)
-    if (t.fee) lines.push(`手续费 ${formatAmount(t.fee, 18, 8)} ${t.nativeSymbol}`)
+    if (t.fee) lines.push(`手续费 ${formatAmount(t.fee, t.nativeDecimals ?? 18, 8)} ${t.nativeSymbol}`)
     if (t.blockNumber) lines.push(`区块 ${t.blockNumber}`)
     if (t.settledAt) lines.push(`确认于 ${formatTime(t.settledAt)}`)
     if (t.error) lines.push(t.error)
     return lines.join('\n')
   })
 
-  return { fromName, toName, kindText, amountText, amountOutText, amountTooltip, detail }
+  return { fromName, toName, fromAddress, kindText, amountText, amountOutText, amountTooltip, detail }
 }

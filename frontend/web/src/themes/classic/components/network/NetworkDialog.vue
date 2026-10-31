@@ -5,6 +5,7 @@ import MxInput from '@/themes/classic/components/MxInput.vue'
 import MxButton from '@/themes/classic/components/MxButton.vue'
 import MxTooltip from '@/themes/classic/components/MxTooltip.vue'
 import MxTag from '@/themes/classic/components/MxTag.vue'
+import MxSelect from '@/themes/classic/components/MxSelect.vue'
 import NetworkTokenList from './NetworkTokenList.vue'
 import NetworkDexList from './NetworkDexList.vue'
 import { useNetworkForm } from '@/composables/network/useNetworkForm'
@@ -15,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const { networkStore, selectedId, form, errors, saving, detecting, isNew, select, createNew, detect, save, remove } = useNetworkForm(props)
+const { networkStore, selectedId, form, errors, saving, detecting, isNew, isTron, typeOptions, rpcPlaceholder, detectHint, symbolPlaceholder, select, createNew, detect, save, remove } = useNetworkForm(props)
 </script>
 
 <template>
@@ -31,7 +32,7 @@ const { networkStore, selectedId, form, errors, saving, detecting, isNew, select
         >
           <span class="network-item__name">{{ n.name }}</span>
           <MxTag v-if="n.id === networkStore.activeNetworkId" type="info">当前</MxTag>
-          <span v-else class="network-item__chain">{{ n.chainId }}</span>
+          <span v-else class="network-item__chain">{{ n.type === 'tron' ? 'Tron' : n.chainId }}</span>
         </button>
         <button class="network-item" :class="{ 'is-active': isNew }" @click="createNew">
           <RiAddLine size="14" />
@@ -41,33 +42,41 @@ const { networkStore, selectedId, form, errors, saving, detecting, isNew, select
 
       <form class="network__form" @submit.prevent="save">
         <label class="network__row">
+          <span class="network__label">链类型</span>
+          <MxSelect v-model="form.type" size="sm" :options="typeOptions" :disabled="!isNew" class="network__field" />
+        </label>
+        <label class="network__row">
           <span class="network__label">名称</span>
           <MxInput v-model="form.name" size="sm" placeholder="如 Ethereum" :error="errors.name" class="network__field" />
         </label>
         <label class="network__row">
-          <span class="network__label">RPC</span>
+          <span class="network__label">{{ isTron ? '节点' : 'RPC' }}</span>
           <div class="network__field network__rpc">
-            <MxInput v-model="form.rpcUrl" size="sm" placeholder="https://..." :error="errors.rpcUrl" class="network__rpc-input" />
-            <MxTooltip content="检测 RPC 并读取 Chain ID">
+            <MxInput v-model="form.rpcUrl" size="sm" :placeholder="rpcPlaceholder" :error="errors.rpcUrl" class="network__rpc-input" />
+            <MxTooltip :content="detectHint">
               <MxButton icon size="sm" aria-label="检测 RPC" :loading="detecting" @click="detect"><RiRadarLine size="16" /></MxButton>
             </MxTooltip>
           </div>
         </label>
+        <label v-if="isTron" class="network__row">
+          <span class="network__label">API Key</span>
+          <MxInput v-model="form.apiKey" size="sm" placeholder="TronGrid API Key（可选，不填受公共限流）" class="network__field" />
+        </label>
         <div class="network__row network__row--inline">
-          <label class="network__row network__half">
+          <label v-if="!isTron" class="network__row network__half">
             <span class="network__label">Chain ID</span>
             <MxInput v-model="form.chainId" size="sm" type="number" :error="errors.chainId" class="network__field" />
           </label>
           <label class="network__row network__half">
             <span class="network__label">符号</span>
-            <MxInput v-model="form.symbol" size="sm" placeholder="ETH" :maxlength="10" :error="errors.symbol" class="network__field" />
+            <MxInput v-model="form.symbol" size="sm" :placeholder="symbolPlaceholder" :maxlength="10" :error="errors.symbol" class="network__field" />
           </label>
         </div>
         <div class="network__row">
           <span class="network__label">Token</span>
           <NetworkTokenList v-model="form.tokens" :network="form" class="network__field" />
         </div>
-        <div class="network__row">
+        <div v-if="!isTron" class="network__row">
           <span class="network__label">交易所</span>
           <NetworkDexList v-model="form.dexes" :network="form" class="network__field" />
         </div>

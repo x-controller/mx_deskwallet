@@ -21,7 +21,7 @@ const props = defineProps({
 
 const emit = defineEmits(['edit', 'drain', 'transfer', 'swap', 'import', 'create', 'watch'])
 
-const { walletStore, networkStore, groupName, symbol, allChecked, indeterminate, toggleAll, balanceOf, remove } = useWalletTable(props)
+const { walletStore, networkStore, groupName, symbol, decimals, displayAddress, allChecked, indeterminate, toggleAll, balanceOf, remove } = useWalletTable(props)
 </script>
 
 <template>
@@ -43,14 +43,14 @@ const { walletStore, networkStore, groupName, symbol, allChecked, indeterminate,
           <MxTag v-if="isWatchWallet(w)" type="info">观察</MxTag>
           <span class="wallet-row__name-text">{{ w.name }}</span>
         </span>
-        <MxAddress :address="w.address" :head="8" :tail="6" />
+        <MxAddress :address="displayAddress(w)" :head="8" :tail="6" />
         <span class="wallet-row__balance is-right">
           <MxSkeleton v-if="balanceOf(w)?.loading" width="72px" />
           <MxTooltip v-else-if="balanceOf(w)?.error" :content="balanceOf(w).error">
             <span class="is-error">查询失败</span>
           </MxTooltip>
           <template v-else-if="balanceOf(w)?.raw !== null && balanceOf(w)?.raw !== undefined">
-            {{ formatAmount(balanceOf(w).raw, 18, 6) }} <span class="wallet-row__symbol">{{ symbol }}</span>
+            {{ formatAmount(balanceOf(w).raw, decimals, 6) }} <span class="wallet-row__symbol">{{ symbol }}</span>
           </template>
           <span v-else class="wallet-row__symbol">—</span>
         </span>

@@ -3,9 +3,9 @@ import { parseUnits } from 'ethers'
 import { useWalletStore } from '@/stores/wallet'
 import { useTxStore } from '@/stores/tx'
 import { trackBusy } from '@/utils/busy'
-import { estimateTransfer, sendTransfer, waitTx, errorText } from '@/utils/chain'
+import { estimateTransfer, sendTransfer, waitTx, errorText, nativeDecimals, addressPlaceholder, chainAddress } from '@/utils/chain'
 import { formatAmount } from '@/utils/format'
-import { validate, rules, isEvmAddress } from '@/utils/validate'
+import { validate, rules, isChainAddress } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
 
@@ -15,7 +15,7 @@ export const NATIVE_KEY = 'native'
 export function networkAssets(network) {
   if (!network) return []
   return [
-    { key: NATIVE_KEY, native: true, symbol: network.symbol, decimals: 18 },
+    { key: NATIVE_KEY, native: true, symbol: network.symbol, decimals: nativeDecimals(network) },
     ...(network.tokens ?? []).map((t) => ({ key: t.address.toLowerCase(), ...t })),
   ]
 }
@@ -64,7 +64,11 @@ export function useTransferForm(props, emit) {
   }
   const assetOptions = computed(() => assets.value.map((a) => ({ label: a.symbol, value: a.key, balance: balanceText(a) })))
   const assetBalanceText = computed(() => (assetBalance.value === null ? '—' : formatAmount(assetBalance.value, asset.value.decimals, 6)))
-  const feeText = computed(() => (estimate.fee === null ? '' : formatAmount(estimate.fee, 18, 8)))
+  const feeDecimals = computed(() => nativeDecimals(props.network))
+  const feeText = computed(() => (estimate.fee === null ? '' : formatAmount(estimate.fee, feeDecimals.value, 8)))
+  const toPlaceholder = computed(() => addressPlaceholder(props.network))
+  /** 转出地址按当前网络的写法展示（Tron 显示 T 地址） */
+  const fromAddress = computed(() => (props.wallet && props.network ? chainAddress(props.network, props.wallet.address) : ''))
 
   /** 金额解析：返回 bigint，格式不对返回 null */
   const parsedAmount = computed(() => {
@@ -101,7 +105,7 @@ export function useTransferForm(props, emit) {
   async function runEstimate() {
     const seq = ++estimateSeq
     const value = parsedAmount.value
-    if (!isEvmAddress(to.value) || !value || value <= 0n) {
+    if (!isChainAddress(props.network, to.value) || !value || value <= 0n) {
       Object.assign(estimate, { loading: false, fee: null, gasLimit: null, feeData: null, error: '' })
       return null
     }
@@ -133,7 +137,7 @@ export function useTransferForm(props, emit) {
     }
     let fee = estimate.fee
     if (fee === null) {
-      if (!isEvmAddress(to.value)) {
+      if (!isChainAddress(props.network, to.value)) {
         errors.value = { to: '请先填写接收地址，以便估算手续费' }
         return
       }
@@ -149,11 +153,11 @@ export function useTransferForm(props, emit) {
       return
     }
     errors.value = {}
-    amount.value = formatAmount(max, 18, 18)
+    amount.value = formatAmount(max, feeDecimals.value, feeDecimals.value)
   }
 
   function validateForm(fee) {
-    const errs = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.address()] })
+    const errs = validate({ to: to.value }, { to: [rules.required('请输入接收地址'), rules.chainAddress(() => props.network)] })
     const value = parsedAmount.value
     if (!amount.value.trim()) errs.amount = '请输入金额'
     else if (value === null) errs.amount = `金额格式不正确（最多 ${asset.value.decimals} 位小数）`
@@ -161,7 +165,7 @@ export function useTransferForm(props, emit) {
     else if (assetBalance.value !== null && value > assetBalance.value) errs.amount = `超过可用余额 ${formatAmount(assetBalance.value, asset.value.decimals, 6)}`
     else if (fee !== null && nativeBalance.value !== null) {
       const need = asset.value.native ? value + fee : fee
-      if (need > nativeBalance.value) errs.amount = `${props.network.symbol} 不足以支付手续费（约需 ${formatAmount(fee, 18, 8)}）`
+      if (need > nativeBalance.value) errs.amount = `${props.network.symbol} 不足以支付手续费（约需 ${formatAmount(fee, feeDecimals.value, 8)}）`
     }
     return errs
   }
@@ -184,7 +188,7 @@ export function useTransferForm(props, emit) {
       const target = to.value.trim()
       const ok = await confirm({
         title: '确认转账',
-        content: `从「${props.wallet.name}」转出 ${formatAmount(value, asset.value.decimals, 8)} ${asset.value.symbol} 至：\n${target}\n\n最高手续费约 ${formatAmount(est.fee, 18, 8)} ${props.network.symbol}。此操作不可撤销。`,
+        content: `从「${props.wallet.name}」转出 ${formatAmount(value, asset.value.decimals, 8)} ${asset.value.symbol} 至：\n${target}\n\n最高手续费约 ${formatAmount(est.fee, feeDecimals.value, 8)} ${props.network.symbol}。此操作不可撤销。`,
         confirmText: '确认转账',
         danger: false,
       })
@@ -199,7 +203,7 @@ export function useTransferForm(props, emit) {
         gasLimit: est.gasLimit,
         feeData: est.feeData,
       })
-      const id = txStore.add({ kind: 'transfer', network: props.network, from: props.wallet.address, to: target, hash: tx.hash, nonce: tx.nonce, asset: asset.value, amount: value })
+      const id = txStore.add({ kind: 'transfer', network: props.network, from: props.wallet.address, to: target, hash: tx.hash, nonce: tx.nonce, expiresAt: tx.expiresAt, asset: asset.value, amount: value })
       const label = `${formatAmount(value, asset.value.decimals, 6)} ${asset.value.symbol}`
       message.success(`已广播 ${label}，等待确认`)
       emit('update:modelValue', false)
@@ -215,5 +219,5 @@ export function useTransferForm(props, emit) {
     }
   }
 
-  return { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, assetBalanceText, feeText, assetOptions, fillMax, submit }
+  return { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, assetBalanceText, feeText, toPlaceholder, fromAddress, assetOptions, fillMax, submit }
 }

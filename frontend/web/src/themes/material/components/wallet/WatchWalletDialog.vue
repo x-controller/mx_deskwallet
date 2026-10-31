@@ -25,7 +25,7 @@ const { text, groupId, loading, groupOptions, lines, valid, invalidCount, submit
         v-model="text"
         :rows="7"
         label="地址"
-        placeholder="每行一个地址，也可用空格 / 逗号分隔"
+        placeholder="每行一个地址（0x 或 T 开头），也可用空格 / 逗号分隔"
         :supporting-text="lines.length ? `识别到 ${valid.length} 个地址` : ''"
         :error="invalidCount ? `识别到 ${valid.length} 个地址，${invalidCount} 条格式无效将被忽略` : ''"
         autofocus

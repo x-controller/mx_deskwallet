@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
+import { chainAddress, nativeDecimals } from '@/utils/chain'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
 
@@ -13,6 +14,9 @@ export function useWalletTable(props) {
 
   const groupName = computed(() => Object.fromEntries(walletStore.groups.map((g) => [g.id, g.name])))
   const symbol = computed(() => networkStore.activeNetwork?.symbol ?? '')
+  const decimals = computed(() => nativeDecimals(networkStore.activeNetwork))
+  /** 按当前网络的写法展示地址（Tron 显示 T 地址） */
+  const displayAddress = (w) => chainAddress(networkStore.activeNetwork, w.address)
 
   const visibleSelected = computed(() => props.wallets.filter((w) => walletStore.selectedIds.has(w.id)).length)
   const allChecked = computed(() => props.wallets.length > 0 && visibleSelected.value === props.wallets.length)
@@ -34,5 +38,5 @@ export function useWalletTable(props) {
     message.success('已删除')
   }
 
-  return { walletStore, networkStore, groupName, symbol, allChecked, indeterminate, toggleAll, balanceOf, remove }
+  return { walletStore, networkStore, groupName, symbol, decimals, displayAddress, allChecked, indeterminate, toggleAll, balanceOf, remove }
 }

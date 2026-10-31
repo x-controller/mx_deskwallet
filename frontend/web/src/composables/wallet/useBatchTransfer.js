@@ -3,9 +3,9 @@ import { parseUnits } from 'ethers'
 import { useWalletStore } from '@/stores/wallet'
 import { useTxStore } from '@/stores/tx'
 import { trackBusy } from '@/utils/busy'
-import { batchTransfer, estimateTransfer, errorText } from '@/utils/chain'
+import { batchTransfer, estimateTransfer, errorText, nativeDecimals, chainAddress, addressPlaceholder } from '@/utils/chain'
 import { formatAmount, shortAddress } from '@/utils/format'
-import { isEvmAddress } from '@/utils/validate'
+import { isChainAddress } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
 import { networkAssets, preferredAssetKey, assetBalanceOf } from './useTransferForm'
@@ -34,10 +34,12 @@ export function useBatchTransfer(props, emit) {
   const estimate = reactive({ loading: false, fee: null, error: '' })
 
   const wallet = computed(() => props.wallets.find((w) => w.id === fromId.value) ?? null)
-  const walletOptions = computed(() => props.wallets.map((w) => ({ label: `${w.name} · ${shortAddress(w.address, 6, 4)}`, value: w.id })))
+  const walletOptions = computed(() => props.wallets.map((w) => ({ label: `${w.name} · ${shortAddress(chainAddress(props.network, w.address), 6, 4)}`, value: w.id })))
   const assets = computed(() => networkAssets(props.network))
   const asset = computed(() => assets.value.find((a) => a.key === assetKey.value) ?? assets.value[0] ?? null)
   const locked = computed(() => running.value || finished.value)
+  const feeDecimals = computed(() => nativeDecimals(props.network))
+  const toPlaceholder = computed(() => addressPlaceholder(props.network))
 
   const balance = computed(() => (wallet.value && props.network ? walletStore.getBalance(props.network.id, wallet.value.address) : null))
   const balanceLoading = computed(() => !!balance.value?.loading)
@@ -72,8 +74,8 @@ export function useBatchTransfer(props, emit) {
       if (!line) return
       const [to, amountStr, ...rest] = line.split(/[\s,;，；]+/)
       const no = i + 1
-      if (!isEvmAddress(to)) {
-        lineErrors.push(`第 ${no} 行：地址格式不正确`)
+      if (!isChainAddress(props.network, to)) {
+        lineErrors.push(`第 ${no} 行：地址格式不正确${toPlaceholder.value === 'T...' ? '（Tron 地址以 T 开头）' : ''}`)
         return
       }
       if (rest.length) {
@@ -115,7 +117,7 @@ export function useBatchTransfer(props, emit) {
   const totalText = computed(() => (asset.value ? formatAmount(total.value, asset.value.decimals, 6) : ''))
   /** 手续费总额 = 单笔估算 × 笔数（ERC-20 给新地址转账会略多，按「约」展示） */
   const feeTotal = computed(() => (estimate.fee === null ? null : estimate.fee * BigInt(items.value.length)))
-  const feeTotalText = computed(() => (feeTotal.value === null ? '' : formatAmount(feeTotal.value, 18, 6)))
+  const feeTotalText = computed(() => (feeTotal.value === null ? '' : formatAmount(feeTotal.value, feeDecimals.value, 6)))
 
   /** 进度列表复用钱包进度组件：把每笔当成一行 */
   const progressRows = computed(() => items.value.map((it, i) => ({ id: i, name: `${i + 1}. ${formatAmount(it.amount, asset.value.decimals, 6)} ${asset.value.symbol}`, address: it.to })))
@@ -165,7 +167,7 @@ export function useBatchTransfer(props, emit) {
     estimate.loading = true
     estimate.error = ''
     try {
-      const r = await estimateTransfer({ network: props.network, from: wallet.value.address, to: first.to, asset: asset.value, amount: first.amount })
+      const r = await estimateTransfer({ network: props.network, from: wallet.value.address, to: first.to, asset: asset.value, amount: first.amount, count: items.value.length })
       if (seq !== estimateSeq) return null
       Object.assign(estimate, { loading: false, fee: r.fee })
       return r
@@ -189,7 +191,7 @@ export function useBatchTransfer(props, emit) {
       message.error('没有可填入的地址')
       return
     }
-    text.value = fillable.value.map((w) => w.address).join('\n')
+    text.value = fillable.value.map((w) => chainAddress(props.network, w.address)).join('\n')
   }
 
   function validateForm(fee) {
@@ -203,7 +205,7 @@ export function useBatchTransfer(props, emit) {
     }
     if (!errs.text && fee !== null && nativeBalance.value !== null) {
       const need = asset.value.native ? total.value + fee : fee
-      if (need > nativeBalance.value) errs.text = `${props.network.symbol} 不足以支付 ${items.value.length} 笔手续费（约需 ${formatAmount(fee, 18, 6)}）`
+      if (need > nativeBalance.value) errs.text = `${props.network.symbol} 不足以支付 ${items.value.length} 笔手续费（约需 ${formatAmount(fee, feeDecimals.value, 6)}）`
     }
     return errs
   }
@@ -228,7 +230,7 @@ export function useBatchTransfer(props, emit) {
       const w = wallet.value
       const ok = await confirm({
         title: '确认批量转账',
-        content: `从「${w.name}」向 ${list.length} 个地址转出合计 ${totalText.value} ${a.symbol}。\n\n手续费约 ${formatAmount(feeAll, 18, 6)} ${props.network.symbol}，各笔连续广播。此操作不可撤销。`,
+        content: `从「${w.name}」向 ${list.length} 个地址转出合计 ${totalText.value} ${a.symbol}。\n\n手续费约 ${formatAmount(feeAll, feeDecimals.value, 6)} ${props.network.symbol}，各笔连续广播。此操作不可撤销。`,
         confirmText: '开始转账',
         danger: false,
       })
@@ -261,6 +263,6 @@ export function useBatchTransfer(props, emit) {
     fromId, assetKey, text, defaultAmount, errors, running, finished, locked,
     wallet, walletOptions, asset, assetOptions, balanceLoading, assetBalance,
     items, lineErrors, lineErrorText, totalText, estimate, feeTotalText,
-    progress, progressRows, canStart, fillable, fillRecipients, start,
+    progress, progressRows, canStart, fillable, fillRecipients, start, toPlaceholder,
   }
 }

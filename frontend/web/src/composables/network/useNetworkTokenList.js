@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { fetchTokenMeta } from '@/utils/chain'
-import { isEvmAddress, isHttpUrl } from '@/utils/validate'
+import { fetchTokenMeta, isTron } from '@/utils/chain'
+import { isChainAddress, isHttpUrl } from '@/utils/validate'
 import { message } from '@/utils/message'
 
 /** 网络表单里的 Token 列表：按合约地址读取元数据后加入，可移除。props 需要 modelValue、network */
@@ -18,7 +18,7 @@ export function useNetworkTokenList(props, emit) {
   async function add() {
     const addr = address.value.trim()
     error.value = ''
-    if (!isEvmAddress(addr)) {
+    if (!isChainAddress(props.network, addr)) {
       error.value = '合约地址格式不正确'
       return
     }
@@ -26,8 +26,8 @@ export function useNetworkTokenList(props, emit) {
       error.value = '该 Token 已存在'
       return
     }
-    if (!isHttpUrl(props.network.rpcUrl) || !props.network.chainId) {
-      error.value = '请先填写 RPC 地址与 Chain ID'
+    if (!isHttpUrl(props.network.rpcUrl) || (!isTron(props.network) && !props.network.chainId)) {
+      error.value = isTron(props.network) ? '请先填写节点地址' : '请先填写 RPC 地址与 Chain ID'
       return
     }
     loading.value = true

@@ -13,7 +13,7 @@ const props = defineProps({
   mode: { type: String, default: 'wallets' },
 })
 
-const { walletStore, networkStore, txStore, updateStore, isHistory, selectedCount, groupOptions, moveTo, removeSelected, clearTxs, checkUpdate } = useStatusBar(props)
+const { walletStore, networkStore, txStore, updateStore, isHistory, selectedCount, groupOptions, chainLabel, moveTo, removeSelected, clearTxs, checkUpdate } = useStatusBar(props)
 </script>
 
 <template>
@@ -48,7 +48,7 @@ const { walletStore, networkStore, txStore, updateStore, isHistory, selectedCoun
       </MdButton>
       <span v-if="!isHistory && walletStore.lastRefreshAt">余额更新于 {{ formatTime(walletStore.lastRefreshAt) }}</span>
       <span v-if="!isHistory && walletStore.lastRefreshAt && networkStore.activeNetwork" class="status-bar__dot">·</span>
-      <span v-if="networkStore.activeNetwork">Chain ID {{ networkStore.activeNetwork.chainId }}</span>
+      <span v-if="chainLabel">{{ chainLabel }}</span>
       <MdTooltip v-if="updateStore.version" content="检查更新">
         <MdButton variant="text" dense :loading="updateStore.checking" :disabled="!!updateStore.phase" @click="checkUpdate">v{{ updateStore.version }}</MdButton>
       </MdTooltip>

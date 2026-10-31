@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
 import { DEFAULT_GROUP_ID } from '@/stores/vault'
-import { isPrivateKey, isEvmAddress } from '@/utils/validate'
+import { isPrivateKey, isAnyAddress } from '@/utils/validate'
 import { message } from '@/utils/message'
 
 /** 分组下拉选项（多个弹框共用） */
@@ -21,7 +21,7 @@ export function useBatchImport(props, emit, kind) {
 
   const groupOptions = useGroupOptions(walletStore)
   const lines = computed(() => text.value.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean))
-  const valid = computed(() => lines.value.filter(kind === 'key' ? isPrivateKey : isEvmAddress))
+  const valid = computed(() => lines.value.filter(kind === 'key' ? isPrivateKey : isAnyAddress))
   const invalidCount = computed(() => lines.value.length - valid.value.length)
 
   watch(

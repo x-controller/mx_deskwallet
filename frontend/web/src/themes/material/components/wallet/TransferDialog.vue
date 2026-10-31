@@ -17,14 +17,14 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'done'])
 
-const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, assetBalanceText, feeText, assetOptions, fillMax, submit } = useTransferForm(props, emit)
+const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, assetBalanceText, feeText, toPlaceholder, fromAddress, assetOptions, fillMax, submit } = useTransferForm(props, emit)
 </script>
 
 <template>
   <MdDialog :model-value="modelValue" :title="`转账 · ${wallet?.name ?? ''}`" icon="send" width="560px" :closable="!sending" @update:model-value="emit('update:modelValue', $event)">
     <div v-if="wallet && network" class="form">
       <MdKeyValue label="转出">
-        <MdAddress :address="wallet.address" full />
+        <MdAddress :address="fromAddress" full />
       </MdKeyValue>
       <MdKeyValue label="网络">{{ network.name }}</MdKeyValue>
 
@@ -38,7 +38,7 @@ const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBa
         </template>
       </MdSelect>
 
-      <MdTextField v-model="to" dense label="接收地址" placeholder="0x..." :error="errors.to" :disabled="sending" autofocus mono />
+      <MdTextField v-model="to" dense label="接收地址" :placeholder="toPlaceholder" :error="errors.to" :disabled="sending" autofocus mono />
 
       <MdTextField v-model="amount" dense label="金额" placeholder="0.0" :error="errors.amount" :disabled="sending" @enter="submit">
         <template #trailing>

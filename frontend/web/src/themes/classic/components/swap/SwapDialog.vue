@@ -98,7 +98,7 @@ const {
 
       <section v-if="running || finished" class="swap__section">
         <h3 class="swap__heading">钱包进度</h3>
-        <WalletProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" :network="network" />
       </section>
 
       <section v-if="logs.length" class="swap__section">

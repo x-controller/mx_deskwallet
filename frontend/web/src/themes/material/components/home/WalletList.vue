@@ -25,7 +25,7 @@ const props = defineProps({
 
 const emit = defineEmits(['edit', 'drain', 'transfer', 'swap', 'import', 'create', 'watch'])
 
-const { walletStore, networkStore, groupName, symbol, allChecked, indeterminate, toggleAll, balanceOf, remove } = useWalletTable(props)
+const { walletStore, networkStore, groupName, symbol, decimals, displayAddress, allChecked, indeterminate, toggleAll, balanceOf, remove } = useWalletTable(props)
 </script>
 
 <template>
@@ -48,14 +48,14 @@ const { walletStore, networkStore, groupName, symbol, allChecked, indeterminate,
           <MdChip v-if="isWatchWallet(w)" tone="tertiary">观察</MdChip>
           <span class="wallet-row__name-text md-body-medium">{{ w.name }}</span>
         </span>
-        <MdAddress :address="w.address" :head="8" :tail="6" />
+        <MdAddress :address="displayAddress(w)" :head="8" :tail="6" />
         <span class="wallet-row__balance is-right">
           <MdSkeleton v-if="balanceOf(w)?.loading" width="72px" />
           <MdTooltip v-else-if="balanceOf(w)?.error" :content="balanceOf(w).error">
             <span class="md-error-text md-body-small">查询失败</span>
           </MdTooltip>
           <template v-else-if="balanceOf(w)?.raw !== null && balanceOf(w)?.raw !== undefined">
-            <span class="wallet-row__amount">{{ formatAmount(balanceOf(w).raw, 18, 6) }}</span> <span class="wallet-row__symbol md-label-small">{{ symbol }}</span>
+            <span class="wallet-row__amount">{{ formatAmount(balanceOf(w).raw, decimals, 6) }}</span> <span class="wallet-row__symbol md-label-small">{{ symbol }}</span>
           </template>
           <span v-else class="wallet-row__symbol">—</span>
         </span>

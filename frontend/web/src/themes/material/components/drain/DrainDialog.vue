@@ -16,13 +16,13 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'done'])
 
-const { to, errors, checked, totals, progress, logs, running, finished, locked, assets, canStart, toggle, start } = useDrainTask(props, emit)
+const { to, errors, checked, totals, progress, logs, running, finished, locked, assets, canStart, toggle, start, toPlaceholder } = useDrainTask(props, emit)
 </script>
 
 <template>
   <MdDialog :model-value="modelValue" :title="`一键清空 · ${wallets.length} 个钱包 · ${network?.name ?? ''}`" width="720px" :closable="!running" @update:model-value="emit('update:modelValue', $event)">
     <div class="drain">
-      <MdTextField v-model="to" dense label="接收地址" placeholder="0x..." :error="errors.to" :disabled="locked" autofocus mono />
+      <MdTextField v-model="to" dense label="接收地址" :placeholder="toPlaceholder" :error="errors.to" :disabled="locked" autofocus mono />
 
       <section class="drain__section">
         <h3 class="drain__heading md-title-small">清空哪些资产</h3>
@@ -31,7 +31,7 @@ const { to, errors, checked, totals, progress, logs, running, finished, locked, 
 
       <section class="drain__section">
         <h3 class="drain__heading md-title-small">钱包进度</h3>
-        <WalletProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" :network="network" />
       </section>
 
       <section v-if="logs.length" class="drain__section">

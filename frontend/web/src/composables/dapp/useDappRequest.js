@@ -28,7 +28,7 @@ export function useDappRequest(props) {
   const session = computed(() => dapp.sessionOf(props.request.topic))
   const peer = computed(() => session.value?.peer?.metadata ?? null)
   const chainId = computed(() => chainIdOf(props.request.params.chainId))
-  const network = computed(() => networkStore.networks.find((n) => n.chainId === chainId.value) ?? null)
+  const network = computed(() => networkStore.evmNetworks.find((n) => n.chainId === chainId.value) ?? null)
   const title = computed(() => `${REQUEST_TITLES[kind.value]} · ${peer.value?.name || 'dApp'}`)
 
   /** 解析结果；解析失败记入 parseError，只允许拒绝 */
@@ -48,7 +48,7 @@ export function useDappRequest(props) {
       }
       if (kind.value === 'switchChain') {
         const target = Number(params.value[0]?.chainId)
-        return { targetChain: target, targetNetwork: networkStore.networks.find((n) => n.chainId === target) ?? null }
+        return { targetChain: target, targetNetwork: networkStore.evmNetworks.find((n) => n.chainId === target) ?? null }
       }
       return {}
     } catch (e) {

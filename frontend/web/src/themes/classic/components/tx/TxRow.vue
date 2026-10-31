@@ -17,7 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['remove'])
 
-const { fromName, toName, kindText, amountText, amountOutText, amountTooltip, detail } = useTxRow(props)
+const { fromName, toName, fromAddress, kindText, amountText, amountOutText, amountTooltip, detail } = useTxRow(props)
 </script>
 
 <template>
@@ -38,7 +38,7 @@ const { fromName, toName, kindText, amountText, amountOutText, amountTooltip, de
     </MxTooltip>
     <span class="tx-row__party">
       <span v-if="fromName" class="tx-row__name" :title="fromName">{{ fromName }}</span>
-      <MxAddress :address="tx.from" :head="6" :tail="4" />
+      <MxAddress :address="fromAddress" :head="6" :tail="4" />
     </span>
     <span class="tx-row__party">
       <span v-if="toName" class="tx-row__name" :title="toName">{{ toName }}</span>

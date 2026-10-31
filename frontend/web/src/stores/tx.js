@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { useVaultStore } from './vault'
-import { getProvider, runPool, errorText } from '@/utils/chain'
+import { getProvider, runPool, errorText, isTron, nativeDecimals } from '@/utils/chain'
+import { getTxInfo } from '@/utils/tron'
+
+/** Tron 记录没带过期时间时，按广播后 10 分钟算 */
+const TRON_DEFAULT_EXPIRE_MS = 10 * 60 * 1000
 
 const uid = () => crypto.randomUUID()
 
@@ -14,15 +18,15 @@ function fromReceipt(receipt) {
     settledAt: Date.now(),
     blockNumber: receipt.blockNumber,
     gasUsed: gasUsed.toString(),
-    fee: (gasUsed * price).toString(),
-    error: receipt.status === 1 ? '' : '交易执行失败（已回滚）',
+    fee: (receipt.fee ?? gasUsed * price).toString(),
+    error: receipt.status === 1 ? '' : receipt.tronResult ? `交易执行失败：${receipt.tronResult}` : '交易执行失败（已回滚）',
   }
 }
 
 /**
  * 交易记录：本应用发出的每一笔链上交易，随金库加密落盘
- * 记录结构：{ id, hash, kind: transfer | batch | collect | drain | approve | swap | dapp, networkId, networkName, chainId, nativeSymbol,
- *   from, to, nonce, asset: { symbol, decimals, address|null }, amount(十进制字符串), toAsset, amountOut, note,
+ * 记录结构：{ id, hash, kind: transfer | batch | collect | drain | approve | swap | dapp, networkId, networkName, chainId, chainType: evm | tron, nativeSymbol, nativeDecimals,
+ *   from, to, nonce, expiresAt(Tron 交易过期时间), asset: { symbol, decimals, address|null }, amount(十进制字符串), toAsset, amountOut, note,
  *   status: pending | success | failed | dropped, createdAt, settledAt, blockNumber, gasUsed, fee, error }
  */
 export const useTxStore = defineStore('tx', () => {
@@ -41,7 +45,7 @@ export const useTxStore = defineStore('tx', () => {
    * 广播成功后立即登记一条待确认记录，返回记录 id
    * kind：transfer | batch | collect | drain | approve | swap | dapp；swap 额外带 toAsset / amountOut（报价）
    */
-  function add({ kind, network, from, to, hash, nonce, asset, amount, toAsset = null, amountOut = null, note = '' }) {
+  function add({ kind, network, from, to, hash, nonce, asset, amount, toAsset = null, amountOut = null, note = '', expiresAt = 0 }) {
     const record = {
       id: uid(),
       hash,
@@ -49,10 +53,13 @@ export const useTxStore = defineStore('tx', () => {
       networkId: network.id,
       networkName: network.name,
       chainId: network.chainId,
+      chainType: network.type === 'tron' ? 'tron' : 'evm',
       nativeSymbol: network.symbol,
+      nativeDecimals: nativeDecimals(network),
       from,
       to,
       nonce,
+      expiresAt,
       asset: snapshotAsset(asset),
       amount: amount.toString(),
       toAsset: snapshotAsset(toAsset),
@@ -93,6 +100,17 @@ export const useTxStore = defineStore('tx', () => {
       const network = networks.find((n) => n.id === t.networkId)
       if (!network) return
       try {
+        if (isTron(network)) {
+          const receipt = await getTxInfo(network, t.hash)
+          if (receipt) {
+            Object.assign(t, fromReceipt(receipt))
+            settled++
+          } else if (Date.now() > (t.expiresAt || t.createdAt + TRON_DEFAULT_EXPIRE_MS) + 90_000) {
+            Object.assign(t, { status: 'dropped', settledAt: Date.now(), error: '交易已过期，未被打包' })
+            settled++
+          }
+          return
+        }
         const provider = getProvider(network)
         const receipt = await provider.getTransactionReceipt(t.hash)
         if (receipt) {

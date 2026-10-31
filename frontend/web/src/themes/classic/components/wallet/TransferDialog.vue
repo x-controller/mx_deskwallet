@@ -17,7 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'done'])
 
-const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, assetOptions, fillMax, submit } = useTransferForm(props, emit)
+const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBalance, feeText, toPlaceholder, fromAddress, assetOptions, fillMax, submit } = useTransferForm(props, emit)
 </script>
 
 <template>
@@ -31,7 +31,7 @@ const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBa
     <div v-if="wallet && network" class="transfer">
       <div class="transfer__row">
         <span class="transfer__label">转出</span>
-        <MxAddress :address="wallet.address" full button-type="default" class="transfer__field" />
+        <MxAddress :address="fromAddress" full button-type="default" class="transfer__field" />
       </div>
 
       <div class="transfer__row">
@@ -49,7 +49,7 @@ const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBa
 
       <div class="transfer__row">
         <span class="transfer__label">接收</span>
-        <MxInput v-model="to" size="sm" placeholder="接收地址 0x..." :error="errors.to" :disabled="sending" autofocus class="transfer__field" />
+        <MxInput v-model="to" size="sm" :placeholder="`接收地址 ${toPlaceholder}`" :error="errors.to" :disabled="sending" autofocus class="transfer__field" />
       </div>
 
       <div class="transfer__row">
@@ -69,7 +69,7 @@ const { assetKey, to, amount, errors, sending, estimate, asset, balance, assetBa
             <span>手续费</span>
             <MxSkeleton v-if="estimate.loading" width="90px" />
             <span v-else-if="estimate.error" class="is-error">估算失败</span>
-            <span v-else-if="estimate.fee !== null">≤ {{ formatAmount(estimate.fee, 18, 8) }} {{ network.symbol }}</span>
+            <span v-else-if="estimate.fee !== null">≤ {{ feeText }} {{ network.symbol }}</span>
             <span v-else>—</span>
           </p>
           <p v-if="estimate.error" class="transfer__error">{{ estimate.error }}</p>

@@ -20,14 +20,14 @@ const emit = defineEmits(['update:modelValue', 'done'])
 
 const {
   to, assetKey, amount, allMode, errors, running, finished, locked,
-  asset, assetOptions, balanceLoading, summary, totalText, shortCount, progress, logs, canStart, start,
+  asset, assetOptions, balanceLoading, summary, totalText, shortCount, progress, logs, canStart, start, toPlaceholder,
 } = useCollectTask(props, emit)
 </script>
 
 <template>
   <MdDialog :model-value="modelValue" :title="`聚合转账 · ${wallets.length} 个钱包 · ${network?.name ?? ''}`" icon="call_merge" width="720px" :closable="!running" @update:model-value="emit('update:modelValue', $event)">
     <div v-if="network" class="collect">
-      <MdTextField v-model="to" dense label="接收地址" placeholder="0x..." :error="errors.to" :disabled="locked" autofocus mono />
+      <MdTextField v-model="to" dense label="接收地址" :placeholder="toPlaceholder" :error="errors.to" :disabled="locked" autofocus mono />
 
       <MdSelect v-model="assetKey" dense label="资产" :options="assetOptions" :disabled="locked">
         <template #option="{ option }">
@@ -65,7 +65,7 @@ const {
 
       <section class="collect__section">
         <h3 class="collect__heading md-title-small">钱包进度</h3>
-        <WalletProgressList :wallets="wallets" :progress="progress" />
+        <WalletProgressList :wallets="wallets" :progress="progress" :network="network" />
       </section>
 
       <section v-if="logs.length" class="collect__section">

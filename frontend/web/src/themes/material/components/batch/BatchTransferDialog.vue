@@ -25,7 +25,7 @@ const emit = defineEmits(['update:modelValue', 'done'])
 const {
   fromId, assetKey, text, defaultAmount, errors, running, finished, locked,
   asset, walletOptions, assetOptions, balanceLoading, assetBalance,
-  items, lineErrorText, totalText, estimate, feeTotalText, progress, progressRows, canStart, fillable, fillRecipients, start,
+  items, lineErrorText, totalText, estimate, feeTotalText, progress, progressRows, canStart, fillable, fillRecipients, start, toPlaceholder,
 } = useBatchTransfer(props, emit)
 </script>
 
@@ -49,7 +49,7 @@ const {
         v-model="text"
         :rows="7"
         label="收款列表"
-        :placeholder="`每行一个：地址 金额，用空格或逗号分隔\n0x1234…abcd 10.5\n没写金额的行使用统一金额`"
+        :placeholder="`每行一个：地址 金额，用空格或逗号分隔\n${toPlaceholder.replace('...', '1234…abcd')} 10.5\n没写金额的行使用统一金额`"
         :supporting-text="items.length ? `识别到 ${items.length} 笔` : '粘贴后自动识别'"
         :error="errors.text || lineErrorText"
         :disabled="locked"

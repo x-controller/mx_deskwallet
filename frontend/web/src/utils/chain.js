@@ -1,5 +1,19 @@
 import { JsonRpcProvider, Wallet, Contract, FetchRequest, formatUnits } from 'ethers'
 import { isTauri } from './storage'
+import { errorText } from './async'
+import * as tron from './tron'
+import { isTron, toTronAddress } from './tron'
+
+export { isTron, toTronAddress }
+
+/** 原生币小数位：EVM 18，Tron 6（存在网络配置的 decimals 里） */
+export const nativeDecimals = (network) => network?.decimals ?? 18
+
+/** 钱包地址按当前网络的写法展示：Tron 显示 T 开头的 base58，其余显示 0x 十六进制 */
+export const chainAddress = (network, hexAddress) => (isTron(network) ? toTronAddress(hexAddress) : hexAddress)
+
+/** 接收地址输入框的占位符 */
+export const addressPlaceholder = (network) => (isTron(network) ? 'T...' : '0x...')
 
 export const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -65,44 +79,21 @@ export async function detectChainId(rpcUrl) {
   }
 }
 
-export const fetchNativeBalance = (network, address) => getProvider(network).getBalance(address)
+export const fetchNativeBalance = (network, address) => (isTron(network) ? tron.fetchNativeBalance(network, address) : getProvider(network).getBalance(address))
 
 export function fetchTokenBalance(network, tokenAddress, address) {
+  if (isTron(network)) return tron.fetchTokenBalance(network, tokenAddress, address)
   return new Contract(tokenAddress, ERC20_ABI, getProvider(network)).balanceOf(address)
 }
 
 export async function fetchTokenMeta(network, tokenAddress) {
+  if (isTron(network)) return tron.fetchTokenMeta(network, tokenAddress)
   const c = new Contract(tokenAddress, ERC20_ABI, getProvider(network))
   const [symbol, decimals] = await Promise.all([c.symbol(), c.decimals()])
   return { symbol, decimals: Number(decimals) }
 }
 
-/** 并发受限地批量执行任务 */
-export async function runPool(items, limit, worker) {
-  const queue = [...items]
-  const runners = Array.from({ length: Math.min(limit, queue.length) }, async () => {
-    while (queue.length) await worker(queue.shift())
-  })
-  await Promise.all(runners)
-}
-
-/** 公共 RPC 偶发限流 / 超时，失败后间隔重试 */
-export async function withRetry(fn, times = 2, delay = 800) {
-  let lastError
-  for (let i = 0; i <= times; i++) {
-    try {
-      return await fn()
-    } catch (e) {
-      lastError = e
-      if (i < times) await new Promise((r) => setTimeout(r, delay * (i + 1)))
-    }
-  }
-  throw lastError
-}
-
-export function errorText(e) {
-  return e?.shortMessage || e?.reason || e?.message || String(e)
-}
+export { runPool, withRetry, errorText } from './async'
 
 /** 按 RPC 返回的费率构造交易费用字段：支持 EIP-1559 走 type 2，否则退回 legacy gasPrice */
 function feeOverrides(feeData, gasLimit) {
@@ -126,6 +117,7 @@ async function estimateNativeGas(provider, from, to) {
  * 返回 { gasLimit, price: 单位 gas 最高价, fee: 最高总费用, feeData }
  */
 export async function estimateTransfer({ network, from, to, asset, amount }) {
+  if (isTron(network)) return tron.estimateTransfer({ network, from, to, asset, amount })
   const provider = getProvider(network)
   const feeData = await provider.getFeeData()
   const price = feeData.maxFeePerGas ?? feeData.gasPrice
@@ -137,6 +129,7 @@ export async function estimateTransfer({ network, from, to, asset, amount }) {
 
 /** 广播一笔转账，返回 ethers 的 TransactionResponse（含 hash / nonce / wait） */
 export async function sendTransfer({ network, privateKey, to, asset, amount, gasLimit, feeData }) {
+  if (isTron(network)) return tron.sendTransfer({ network, privateKey, to, asset, amount, feeData })
   const wallet = new Wallet(privateKey, getProvider(network))
   const overrides = feeOverrides(feeData, gasLimit)
   if (asset.native) return wallet.sendTransaction({ to, value: amount, ...overrides })
@@ -164,7 +157,12 @@ export async function waitTx(tx, onSettled) {
  * onSent({ hash, nonce, to, asset, amount }) 每笔广播后调用，返回值作为记录 id 传给 onSettled(id, receipt, error)
  * 返回 { success: 成功笔数, failed: 失败笔数 }
  */
-export async function drainWallet({ network, privateKey, to, tokens, includeNative, onLog, onSent, onSettled }) {
+export async function drainWallet(args) {
+  if (isTron(args.network)) return tron.drainWallet(args)
+  return drainEvmWallet(args)
+}
+
+async function drainEvmWallet({ network, privateKey, to, tokens, includeNative, onLog, onSent, onSettled }) {
   const provider = getProvider(network)
   const wallet = new Wallet(privateKey, provider)
   const log = (type, text) => onLog?.({ type, text })
@@ -194,7 +192,7 @@ export async function drainWallet({ network, privateKey, to, tokens, includeNati
   }
 
   if (includeNative) {
-    const native = { native: true, symbol: network.symbol, decimals: 18 }
+    const native = { native: true, symbol: network.symbol, decimals: nativeDecimals(network) }
     try {
       const balance = await provider.getBalance(wallet.address)
       if (balance === 0n) {
@@ -223,7 +221,12 @@ export async function drainWallet({ network, privateKey, to, tokens, includeNati
  * amount 为 bigint（固定数量）或 'all'（全部余额；原生币扣除 gas）
  * 回调语义同 drainWallet；返回 { success | failed | skipped: true }
  */
-export async function collectFromWallet({ network, privateKey, to, asset, amount, onLog, onSent, onSettled }) {
+export async function collectFromWallet(args) {
+  if (isTron(args.network)) return tron.collectFromWallet(args)
+  return collectFromEvmWallet(args)
+}
+
+async function collectFromEvmWallet({ network, privateKey, to, asset, amount, onLog, onSent, onSettled }) {
   const provider = getProvider(network)
   const wallet = new Wallet(privateKey, provider)
   const log = (type, text) => onLog?.({ type, text })
@@ -287,7 +290,12 @@ export async function collectFromWallet({ network, privateKey, to, asset, amount
  * onSent(index, { hash, nonce, to, asset, amount }) 返回记录 id，传给 onSettled(id, receipt, error)
  * 返回 { success, failed }
  */
-export async function batchTransfer({ network, privateKey, asset, items, onUpdate, onSent, onSettled }) {
+export async function batchTransfer(args) {
+  if (isTron(args.network)) return tron.batchTransfer(args)
+  return batchEvmTransfer(args)
+}
+
+async function batchEvmTransfer({ network, privateKey, asset, items, onUpdate, onSent, onSettled }) {
   const provider = getProvider(network)
   const wallet = new Wallet(privateKey, provider)
   const contract = asset.native ? null : new Contract(asset.address, ERC20_ABI, wallet)

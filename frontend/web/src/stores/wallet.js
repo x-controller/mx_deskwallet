@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { Wallet, getAddress } from 'ethers'
+import { Wallet } from 'ethers'
+import { normalizeAddress } from '@/utils/validate'
 import { useVaultStore, DEFAULT_GROUP_ID } from './vault'
 import { fetchNativeBalance, fetchTokenBalance, runPool, withRetry } from '@/utils/chain'
 
@@ -89,7 +90,7 @@ export const useWalletStore = defineStore('wallet', () => {
     let added = 0
     let skipped = 0
     for (const raw of addresses) {
-      const address = getAddress(raw.trim())
+      const address = normalizeAddress(raw)
       const lower = address.toLowerCase()
       if (existing.has(lower)) {
         skipped++

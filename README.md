@@ -2,11 +2,11 @@
 
 > 名字取自罗马神话的钥匙之神波尔图努斯（Portunus）：手持钥匙，掌管门与港口，对应「私钥握在自己手里，资金进出都由自己开门」。
 
-基于 Tauri 2 + Vue 3 的极简 EVM 桌面钱包：私钥导入、创建钱包、观察钱包（只存地址看余额）、钱包分组、配置 RPC、原生币 / Token 转账、批量转账（一个钱包向多个地址，每行地址 + 金额）、聚合转账（多个钱包把某种资产归集到一个地址）、DEX 兑换（Uniswap V2 / V3、PancakeSwap V2 / V3、QuickSwap 等，V3 自动择优手续费档位，可自行添加同类路由）、交易记录（搜索 / 分页 / 状态轮询）、一键清空（先 Token 后原生币，支持勾选）、dApp 连接（WalletConnect v2，任何支持 WalletConnect 的网页 dApp 都能连本钱包签名）。
+基于 Tauri 2 + Vue 3 的极简桌面钱包，支持 EVM 链与 Tron（波场）：私钥导入、创建钱包、观察钱包（只存地址看余额）、钱包分组、配置 RPC、原生币 / Token 转账、批量转账（一个钱包向多个地址，每行地址 + 金额）、聚合转账（多个钱包把某种资产归集到一个地址）、DEX 兑换（Uniswap V2 / V3、PancakeSwap V2 / V3、QuickSwap 等，V3 自动择优手续费档位，可自行添加同类路由）、交易记录（搜索 / 分页 / 状态轮询）、一键清空（先 Token 后原生币，支持勾选）、dApp 连接（WalletConnect v2，任何支持 WalletConnect 的网页 dApp 都能连本钱包签名）。
 
 ## 目录
 
-- `frontend/web/` 前端（Vite + Vue 3 + Pinia）：`src/composables/` 业务逻辑；`src/themes/classic/` 经典风格（Mx 前缀自研组件，`styles/tokens.css` 为 design tokens）；`src/themes/material/` Material 3 风格（Md 前缀组件，`--md-sys-*` token，种子色动态配色，Roboto + Material Symbols）
+- `frontend/web/` 前端（Vite + Vue 3 + Pinia）：`src/composables/` 业务逻辑；`src/utils/chain.js` 链上调用入口（按网络类型分发到 ethers 的 EVM 实现或 `src/utils/tron.js` 的 Tron 实现）；`src/themes/classic/` 经典风格（Mx 前缀自研组件，`styles/tokens.css` 为 design tokens）；`src/themes/material/` Material 3 风格（Md 前缀组件，`--md-sys-*` token，种子色动态配色，Roboto + Material Symbols）
 - `src-tauri/` Tauri 壳（store / http / clipboard / updater 四个插件，自定义命令只有更新，src/update.rs）
 - `todo/` 按版本维护的待办清单
 
@@ -34,6 +34,14 @@ pnpm tauri build    # 产出 NSIS 安装包：src-tauri/target/release/bundle/ns
 - 兑换走网络配置里的 Router：V2 直接查 `getAmountsOut`，V3 经 QuoterV2 遍历手续费档位；报价取直连 / 经包装币中转所有路线里输出最多的，显示价格影响并按滑点设最少到手；Token 授权不足时先发 approve（默认只授权本次数量）
 - 批量转账从一个钱包按递增 nonce 连续广播多笔，全部广播后统一等回执，某笔广播失败不影响后面的；聚合转账与一键清空一样按钱包并发 3 执行，全部余额模式下原生币会扣除手续费再转出
 - 转账、批量 / 聚合转账、兑换与一键清空都需二次确认且不可撤销；广播后的交易进入「交易记录」，待确认记录每 10 秒轮询回执，可识别成功 / 回滚 / 被替换丢弃
+
+## Tron（波场）
+
+- 内置「Tron」主网与「Tron Nile 测试网」两个网络（TronGrid 节点，预置 TRC-20 USDT），也可在「配置 RPC」里选链类型 Tron 新增自建节点；TronGrid 的 API Key 可选，不填受公共限流
+- 同一把私钥在 EVM 链和 Tron 上是同一个账户：金库里统一保存 0x 地址，切到 Tron 网络时列表、转账、批量 / 聚合转账、交易记录都显示 T 开头的地址，收款地址也按 T 地址校验；添加观察钱包可以直接粘贴 T 地址
+- 支持余额、单笔转账、批量转账、聚合转账、一键清空、交易记录轮询（按回执结果判断成功 / 失败，过期未打包记为已丢弃）；兑换与 dApp 连接在 Tron 下不可用
+- 手续费按能量 / 带宽估算：先查账户可用资源，不够的部分按链上单价折算成要烧的 TRX，TRC-20 转账的能量由节点模拟得到；给未激活地址转 TRX 会多出建户费。批量多笔时按总消耗扣除可用资源，所以后面几笔会比第一笔贵
+- 交易体由节点接口构造，本地校验 txID 与 raw_data 一致、合约参数与请求一致后再签名广播，私钥不离开本机
 
 ## dApp 连接（WalletConnect）
 

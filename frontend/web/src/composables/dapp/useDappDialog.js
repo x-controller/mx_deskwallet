@@ -16,7 +16,7 @@ export function useDappDialog(props) {
   const disconnecting = ref('')
   const editingProject = ref(false)
 
-  const networkNames = computed(() => Object.fromEntries(networkStore.networks.map((n) => [n.chainId, n.name])))
+  const networkNames = computed(() => Object.fromEntries(networkStore.evmNetworks.map((n) => [n.chainId, n.name])))
 
   watch(
     () => props.modelValue,
