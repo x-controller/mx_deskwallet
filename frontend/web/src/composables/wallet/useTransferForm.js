@@ -20,6 +20,20 @@ export function networkAssets(network) {
   ]
 }
 
+/** 批量 / 聚合转账的默认资产：优先 USDT，其次第一个 Token，再退回原生币 */
+export function preferredAssetKey(assets) {
+  const usdt = assets.find((a) => !a.native && String(a.symbol).toUpperCase() === 'USDT')
+  return (usdt ?? assets.find((a) => !a.native) ?? assets[0])?.key ?? NATIVE_KEY
+}
+
+/** 钱包在某网络上某资产的余额：余额未加载 / 查询失败返回 null */
+export function assetBalanceOf(walletStore, network, address, asset) {
+  const b = walletStore.getBalance(network.id, address)
+  if (!b || b.loading) return null
+  const raw = asset.native ? b.raw : b.tokens?.[asset.key]
+  return raw === undefined ? null : raw
+}
+
 /** 转账弹框：资产选择、余额、手续费估算（防抖）、全部、校验、发送与后台等待上链。props 需要 modelValue、wallet、network */
 export function useTransferForm(props, emit) {
   const walletStore = useWalletStore()

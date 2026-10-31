@@ -1,6 +1,8 @@
 <script setup>
+import { computed } from 'vue'
 import MdIcon from '@/themes/material/components/MdIcon.vue'
 import MdIconButton from '@/themes/material/components/MdIconButton.vue'
+import MdMenu from '@/themes/material/components/MdMenu.vue'
 import MdSelect from '@/themes/material/components/MdSelect.vue'
 import MdSearchBar from '@/themes/material/components/MdSearchBar.vue'
 import MdSegmentedButton from '@/themes/material/components/MdSegmentedButton.vue'
@@ -12,24 +14,33 @@ const props = defineProps({
   refreshing: { type: Boolean, default: false },
   /** 主区域正在显示什么：wallets 钱包列表 | history 交易记录 */
   mode: { type: String, default: 'wallets' },
-  /** 清空按钮的 tooltip 文案（由父级根据选中数量生成） */
-  drainHint: { type: String, default: '一键清空' },
+  /** 「批量操作」菜单各项的说明（由父级根据选中范围生成）与禁用态 */
+  drainHint: { type: String, default: '' },
   drainDisabled: { type: Boolean, default: false },
-  /** 兑换按钮的 tooltip 文案 */
-  swapHint: { type: String, default: '兑换' },
+  swapHint: { type: String, default: '' },
   swapDisabled: { type: Boolean, default: false },
+  batchHint: { type: String, default: '' },
+  batchDisabled: { type: Boolean, default: false },
+  collectHint: { type: String, default: '' },
+  collectDisabled: { type: Boolean, default: false },
   /** dApp 待处理请求数，大于 0 时按钮高亮 */
   dappPending: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'watch', 'drain', 'swap', 'network', 'refresh', 'appearance', 'lock', 'dapp'])
+const emit = defineEmits(['update:keyword', 'update:mode', 'import', 'create', 'watch', 'batch', 'collect', 'drain', 'swap', 'network', 'refresh', 'appearance', 'lock', 'dapp'])
 
-const { networkStore, networkOptions, isHistory, searchPlaceholder } = useTopBar(props)
+const { networkStore, networkOptions, isHistory, searchPlaceholder, walletMenu, batchMenu } = useTopBar(props)
 
 const MODES = [
   { value: 'wallets', label: '钱包', icon: 'account_balance_wallet' },
   { value: 'history', label: '记录', icon: 'history' },
 ]
+
+/** 菜单条目 key → Material Symbols 名称 */
+const ICONS = { import: 'key', create: 'add', watch: 'visibility', batch: 'call_split', collect: 'call_merge', swap: 'swap_horiz', drain: 'cleaning_services' }
+const withIcons = (items) => items.map((it) => ({ ...it, icon: ICONS[it.key] }))
+const walletItems = computed(() => withIcons(walletMenu.value))
+const batchItems = computed(() => withIcons(batchMenu.value))
 </script>
 
 <template>
@@ -49,21 +60,8 @@ const MODES = [
     <MdSegmentedButton class="top-bar__mode" :model-value="mode" :options="MODES" @update:model-value="emit('update:mode', $event)" />
 
     <div class="top-bar__actions">
-      <MdTooltip content="导入私钥">
-        <MdIconButton aria-label="导入私钥" @click="emit('import')"><MdIcon name="key" /></MdIconButton>
-      </MdTooltip>
-      <MdTooltip content="创建钱包">
-        <MdIconButton variant="tonal" aria-label="创建钱包" @click="emit('create')"><MdIcon name="add" /></MdIconButton>
-      </MdTooltip>
-      <MdTooltip content="添加观察钱包（只看余额，不含私钥）">
-        <MdIconButton aria-label="添加观察钱包" @click="emit('watch')"><MdIcon name="visibility" /></MdIconButton>
-      </MdTooltip>
-      <MdTooltip :content="swapHint">
-        <MdIconButton aria-label="兑换" :disabled="swapDisabled" @click="emit('swap')"><MdIcon name="swap_horiz" /></MdIconButton>
-      </MdTooltip>
-      <MdTooltip :content="drainHint">
-        <MdIconButton color="error" aria-label="一键清空" :disabled="drainDisabled" @click="emit('drain')"><MdIcon name="cleaning_services" /></MdIconButton>
-      </MdTooltip>
+      <MdMenu label="添加钱包" variant="tonal" :items="walletItems" @select="emit($event)"><MdIcon name="add" /></MdMenu>
+      <MdMenu label="批量操作" :items="batchItems" @select="emit($event)"><MdIcon name="checklist" /></MdMenu>
       <MdTooltip :content="dappPending ? `dApp 连接 · ${dappPending} 个待处理请求` : 'dApp 连接（WalletConnect）'">
         <MdIconButton :variant="dappPending ? 'filled' : 'standard'" aria-label="dApp 连接" @click="emit('dapp')"><MdIcon name="link" /></MdIconButton>
       </MdTooltip>

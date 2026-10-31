@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Wallet, Contract, FetchRequest } from 'ethers'
+import { JsonRpcProvider, Wallet, Contract, FetchRequest, formatUnits } from 'ethers'
 import { isTauri } from './storage'
 
 export const ERC20_ABI = [
@@ -215,5 +215,113 @@ export async function drainWallet({ network, privateKey, to, tokens, includeNati
       log('error', `${network.symbol} 转出失败：${errorText(e)}`)
     }
   }
+  return result
+}
+
+/**
+ * 聚合转账的单钱包步骤：把一种资产转到目标地址。
+ * amount 为 bigint（固定数量）或 'all'（全部余额；原生币扣除 gas）
+ * 回调语义同 drainWallet；返回 { success | failed | skipped: true }
+ */
+export async function collectFromWallet({ network, privateKey, to, asset, amount, onLog, onSent, onSettled }) {
+  const provider = getProvider(network)
+  const wallet = new Wallet(privateKey, provider)
+  const log = (type, text) => onLog?.({ type, text })
+  const all = amount === 'all'
+  try {
+    let tx
+    let value
+    if (asset.native) {
+      const [balance, feeData, gasLimit] = await Promise.all([
+        provider.getBalance(wallet.address),
+        provider.getFeeData(),
+        estimateNativeGas(provider, wallet.address, to),
+      ])
+      const fee = gasLimit * (feeData.maxFeePerGas ?? feeData.gasPrice)
+      if (all) {
+        if (balance === 0n) {
+          log('info', `${asset.symbol} 余额为 0，跳过`)
+          return { skipped: true }
+        }
+        value = balance - fee
+        if (value <= 0n) {
+          log('info', `${asset.symbol} 余额不足以支付 gas，跳过`)
+          return { skipped: true }
+        }
+      } else {
+        value = amount
+        if (value + fee > balance) throw new Error(`${asset.symbol} 余额 ${formatUnits(balance, 18)} 不足以支付 ${formatUnits(value, 18)} 及手续费`)
+      }
+      tx = await wallet.sendTransaction({ to, value, ...feeOverrides(feeData, gasLimit) })
+    } else {
+      const c = new Contract(asset.address, ERC20_ABI, wallet)
+      const balance = await c.balanceOf(wallet.address)
+      if (all) {
+        if (balance === 0n) {
+          log('info', `${asset.symbol} 余额为 0，跳过`)
+          return { skipped: true }
+        }
+        value = balance
+      } else {
+        value = amount
+        if (value > balance) throw new Error(`${asset.symbol} 余额 ${formatUnits(balance, asset.decimals)} 不足`)
+      }
+      tx = await c.transfer(to, value)
+    }
+    log('info', `${formatUnits(value, asset.decimals)} ${asset.symbol} 已广播 ${tx.hash}`)
+    const id = onSent?.({ hash: tx.hash, nonce: tx.nonce, to, asset, amount: value })
+    await waitTx(tx, (receipt, error) => onSettled?.(id, receipt, error))
+    log('success', `${formatUnits(value, asset.decimals)} ${asset.symbol} 转出完成`)
+    return { success: true }
+  } catch (e) {
+    log('error', `${asset.symbol} 转出失败：${errorText(e)}`)
+    return { failed: true }
+  }
+}
+
+/**
+ * 批量转账：从一个钱包依次向多个地址转同一种资产。
+ * 用本地递增的 nonce 连续广播、不等上一笔确认，全部广播后统一等回执；某笔广播失败不占用 nonce，下一笔继续。
+ * items：[{ to, amount: bigint }]
+ * onUpdate(index, { status: 'running' | 'done' | 'failed', text })
+ * onSent(index, { hash, nonce, to, asset, amount }) 返回记录 id，传给 onSettled(id, receipt, error)
+ * 返回 { success, failed }
+ */
+export async function batchTransfer({ network, privateKey, asset, items, onUpdate, onSent, onSettled }) {
+  const provider = getProvider(network)
+  const wallet = new Wallet(privateKey, provider)
+  const contract = asset.native ? null : new Contract(asset.address, ERC20_ABI, wallet)
+  const result = { success: 0, failed: 0 }
+  const feeData = await provider.getFeeData()
+  let nonce = await provider.getTransactionCount(wallet.address, 'pending')
+  const waits = []
+
+  for (let i = 0; i < items.length; i++) {
+    const { to, amount } = items[i]
+    onUpdate?.(i, { status: 'running', text: '估算 gas…' })
+    try {
+      const gasLimit = asset.native ? await estimateNativeGas(provider, wallet.address, to) : await contract.transfer.estimateGas(to, amount)
+      const overrides = { ...feeOverrides(feeData, gasLimit), nonce }
+      const tx = asset.native ? await wallet.sendTransaction({ to, value: amount, ...overrides }) : await contract.transfer(to, amount, overrides)
+      nonce++
+      onUpdate?.(i, { status: 'running', text: `已广播 ${tx.hash}` })
+      const id = onSent?.(i, { hash: tx.hash, nonce: tx.nonce, to, asset, amount })
+      waits.push(
+        waitTx(tx, (receipt, error) => onSettled?.(id, receipt, error))
+          .then(() => {
+            result.success++
+            onUpdate?.(i, { status: 'done', text: `已确认 ${tx.hash}` })
+          })
+          .catch((e) => {
+            result.failed++
+            onUpdate?.(i, { status: 'failed', text: `失败：${errorText(e)}` })
+          }),
+      )
+    } catch (e) {
+      result.failed++
+      onUpdate?.(i, { status: 'failed', text: `广播失败：${errorText(e)}` })
+    }
+  }
+  await Promise.all(waits)
   return result
 }

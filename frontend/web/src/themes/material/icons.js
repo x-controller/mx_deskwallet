@@ -6,7 +6,10 @@ import account_balance_wallet from '@material-symbols/svg-400/outlined/account_b
 import add from '@material-symbols/svg-400/outlined/add.svg?raw'
 import add_circle from '@material-symbols/svg-400/outlined/add_circle.svg?raw'
 import arrow_drop_down from '@material-symbols/svg-400/outlined/arrow_drop_down.svg?raw'
+import call_merge from '@material-symbols/svg-400/outlined/call_merge.svg?raw'
+import call_split from '@material-symbols/svg-400/outlined/call_split.svg?raw'
 import check from '@material-symbols/svg-400/outlined/check.svg?raw'
+import checklist from '@material-symbols/svg-400/outlined/checklist.svg?raw'
 import check_circle from '@material-symbols/svg-400/outlined/check_circle.svg?raw'
 import chevron_left from '@material-symbols/svg-400/outlined/chevron_left.svg?raw'
 import chevron_right from '@material-symbols/svg-400/outlined/chevron_right.svg?raw'
@@ -52,7 +55,7 @@ import wallet from '@material-symbols/svg-400/outlined/wallet.svg?raw'
 import warning from '@material-symbols/svg-400/outlined/warning.svg?raw'
 
 export const icons = {
-  account_balance_wallet, add, add_circle, arrow_drop_down, check, check_circle, chevron_left, chevron_right,
+  account_balance_wallet, add, add_circle, arrow_drop_down, call_merge, call_split, check, check_circle, checklist, chevron_left, chevron_right,
   cleaning_services, close, content_copy, dangerous, dark_mode, delete: delete_, download, edit, error, explore,
   folder, gpp_bad, history, hub, inbox, info, key, language, light_mode, link, link_off, lock, palette, power,
   radar, receipt_long, refresh, remove, search, send, settings, shield, swap_horiz, token, tune, verified,

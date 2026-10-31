@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { MaxUint256 } from 'ethers'
 import { formatAmount, formatTime } from '@/utils/format'
 
-export const TX_KIND = { transfer: '转账', drain: '清空', approve: '授权', swap: '兑换', dapp: 'dApp' }
+export const TX_KIND = { transfer: '转账', batch: '批量', collect: '聚合', drain: '清空', approve: '授权', swap: '兑换', dapp: 'dApp' }
 
 export const TX_STATUS = {
   pending: { text: '待确认' },

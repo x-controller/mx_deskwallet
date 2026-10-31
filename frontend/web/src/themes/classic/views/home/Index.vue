@@ -11,6 +11,8 @@ import EditWalletDialog from '@/themes/classic/components/wallet/EditWalletDialo
 import TransferDialog from '@/themes/classic/components/wallet/TransferDialog.vue'
 import NetworkDialog from '@/themes/classic/components/network/NetworkDialog.vue'
 import DrainDialog from '@/themes/classic/components/drain/DrainDialog.vue'
+import BatchTransferDialog from '@/themes/classic/components/batch/BatchTransferDialog.vue'
+import CollectDialog from '@/themes/classic/components/batch/CollectDialog.vue'
 import SwapDialog from '@/themes/classic/components/swap/SwapDialog.vue'
 import DappDialog from '@/themes/classic/components/dapp/DappDialog.vue'
 import DappProposalDialog from '@/themes/classic/components/dapp/DappProposalDialog.vue'
@@ -21,11 +23,12 @@ import { useHomePage } from '@/composables/home/useHomePage'
 const {
   walletStore, networkStore, txStore, dappStore,
   mode, activeGroupId, keyword, refreshing, dialogs,
-  editingWallet, transferWallet, drainTargets, swapTargets,
-  visibleWallets, visibleTxs, defaultGroupId, drainCandidates,
+  editingWallet, transferWallet, drainTargets, swapTargets, collectTargets, batchSender,
+  visibleWallets, visibleTxs, defaultGroupId, drainCandidates, batchScope,
   drainHint, swapHint, drainDisabled, swapDisabled,
-  refresh, refreshMissing, refreshTransfer, refreshDrain, refreshSwap,
-  openDrain, openSwap, openTransfer, openEdit, lock,
+  collectHint, collectDisabled, batchHintText, batchDisabled,
+  refresh, refreshMissing, refreshTransfer, refreshDrain, refreshSwap, refreshCollect, refreshBatch,
+  openDrain, openSwap, openCollect, openBatch, openTransfer, openEdit, lock,
 } = useHomePage()
 </script>
 
@@ -39,6 +42,10 @@ const {
       :drain-disabled="drainDisabled"
       :swap-hint="swapHint"
       :swap-disabled="swapDisabled"
+      :batch-hint="batchHintText"
+      :batch-disabled="batchDisabled"
+      :collect-hint="collectHint"
+      :collect-disabled="collectDisabled"
       :dapp-pending="dappStore.pendingCount"
       @dapp="dialogs.dapp = true"
       @import="dialogs.import = true"
@@ -46,6 +53,8 @@ const {
       @watch="dialogs.watch = true"
       @drain="openDrain(drainCandidates)"
       @swap="openSwap(drainCandidates)"
+      @batch="openBatch"
+      @collect="openCollect(drainCandidates)"
       @network="dialogs.network = true"
       @refresh="refresh"
       @font="dialogs.font = true"
@@ -80,6 +89,8 @@ const {
     <FontDialog v-model="dialogs.font" />
     <DrainDialog v-model="dialogs.drain" :wallets="drainTargets" :network="networkStore.activeNetwork" @done="refreshDrain" />
     <SwapDialog v-model="dialogs.swap" :wallets="swapTargets" :network="networkStore.activeNetwork" @done="refreshSwap" />
+    <BatchTransferDialog v-model="dialogs.batch" :wallets="walletStore.signableWallets" :default-wallet="batchSender" :recipients="batchScope" :network="networkStore.activeNetwork" @done="refreshBatch" />
+    <CollectDialog v-model="dialogs.collect" :wallets="collectTargets" :network="networkStore.activeNetwork" @done="refreshCollect" />
     <DappDialog v-model="dialogs.dapp" />
     <DappProposalDialog v-if="dappStore.currentProposal" :key="dappStore.currentProposal.id" :proposal="dappStore.currentProposal" />
     <DappRequestDialog v-else-if="dappStore.currentRequest" :key="dappStore.currentRequest.id" :request="dappStore.currentRequest" />

@@ -27,11 +27,14 @@ export function useHomePage() {
   const activeGroupId = ref('all')
   const keyword = ref('')
   const refreshing = ref(false)
-  const dialogs = reactive({ import: false, create: false, watch: false, edit: false, transfer: false, network: false, drain: false, swap: false, font: false, dapp: false, appearance: false })
+  const dialogs = reactive({ import: false, create: false, watch: false, edit: false, transfer: false, batch: false, collect: false, network: false, drain: false, swap: false, font: false, dapp: false, appearance: false })
   const editingWallet = ref(null)
   const transferWallet = ref(null)
   const drainTargets = ref([])
   const swapTargets = ref([])
+  const collectTargets = ref([])
+  /** 批量转账打开时预选的转出钱包 */
+  const batchSender = ref(null)
 
   const visibleWallets = computed(() => {
     const kw = keyword.value.trim().toLowerCase()
@@ -62,20 +65,30 @@ export function useHomePage() {
   /** 批量操作的对象：选中则作用于选中，否则作用于当前列表全部；观察钱包没有私钥，一律排除 */
   const batchScope = computed(() => (selectedVisible.value.length ? selectedVisible.value : visibleWallets.value))
   const drainCandidates = computed(() => batchScope.value.filter((w) => !isWatchWallet(w)))
-  function batchHint(action) {
+  /** 批量操作作用范围的说明文字（顶栏「批量操作」菜单里显示在操作名下方） */
+  function scopeHint(action) {
     const watchCount = batchScope.value.length - drainCandidates.value.length
-    if (!batchScope.value.length) return `${action}（当前没有钱包）`
-    if (!drainCandidates.value.length) return `${action}（观察钱包没有私钥，不能${action}）`
+    if (!batchScope.value.length) return '当前没有钱包'
+    if (!drainCandidates.value.length) return `观察钱包没有私钥，不能${action}`
     const skip = watchCount ? `，跳过 ${watchCount} 个观察钱包` : ''
     return selectedVisible.value.length
-      ? `${action}：选中的 ${drainCandidates.value.length} 个钱包${skip}`
-      : `${action}：当前列表全部 ${drainCandidates.value.length} 个钱包${skip}`
+      ? `选中的 ${drainCandidates.value.length} 个钱包${skip}`
+      : `当前列表全部 ${drainCandidates.value.length} 个钱包${skip}`
   }
-  const drainHint = computed(() => batchHint('一键清空'))
+  const drainHint = computed(() => scopeHint('清空'))
   const hasDex = computed(() => (networkStore.activeNetwork?.dexes ?? []).length > 0)
-  const swapHint = computed(() => (hasDex.value ? batchHint('兑换') : '当前网络未配置交易所，请先在配置 RPC 里添加'))
+  const swapHint = computed(() => (hasDex.value ? scopeHint('兑换') : '当前网络未配置交易所，请先在配置 RPC 里添加'))
   const drainDisabled = computed(() => !drainCandidates.value.length || !networkStore.activeNetwork)
   const swapDisabled = computed(() => !drainCandidates.value.length || !hasDex.value)
+  const collectHint = computed(() => scopeHint('转账'))
+  const collectDisabled = drainDisabled
+  const batchHintText = computed(() => {
+    if (!walletStore.signableWallets.length) return '没有持有私钥的钱包'
+    return selectedVisible.value.length === 1 && !isWatchWallet(selectedVisible.value[0])
+      ? `从「${selectedVisible.value[0].name}」向多个地址转账`
+      : '从一个钱包向多个地址转账'
+  })
+  const batchDisabled = computed(() => !walletStore.signableWallets.length || !networkStore.activeNetwork)
 
   async function refreshBalances(addresses = walletStore.wallets.map((w) => w.address)) {
     if (!networkStore.activeNetwork || !addresses.length) return
@@ -122,6 +135,21 @@ export function useHomePage() {
     dialogs.swap = true
   }
 
+  function openCollect(targets) {
+    targets = targets.filter((w) => !isWatchWallet(w))
+    if (!networkStore.activeNetwork || !targets.length) return
+    collectTargets.value = targets
+    dialogs.collect = true
+  }
+
+  /** 批量转账：只选了一个可签名钱包就预选它，否则取列表第一个 */
+  function openBatch() {
+    if (!networkStore.activeNetwork || !walletStore.signableWallets.length) return
+    const picked = selectedVisible.value.length === 1 && !isWatchWallet(selectedVisible.value[0]) ? selectedVisible.value[0] : null
+    batchSender.value = picked ?? visibleWallets.value.find((w) => !isWatchWallet(w)) ?? walletStore.signableWallets[0]
+    dialogs.batch = true
+  }
+
   function openTransfer(wallet) {
     if (!networkStore.activeNetwork || isWatchWallet(wallet)) return
     transferWallet.value = wallet
@@ -143,6 +171,9 @@ export function useHomePage() {
   const refreshTransfer = () => refreshBalances([transferWallet.value.address])
   const refreshDrain = () => refreshBalances(drainTargets.value.map((w) => w.address))
   const refreshSwap = () => refreshBalances(swapTargets.value.map((w) => w.address))
+  const refreshCollect = () => refreshBalances(collectTargets.value.map((w) => w.address))
+  /** 批量转账只刷新转出钱包和收款方里属于本金库的地址 */
+  const refreshBatch = ({ from, recipients }) => refreshBalances([...new Set([from, ...recipients].map((a) => walletByAddress.value[a.toLowerCase()]?.address).filter(Boolean))])
 
   watch(
     () => networkStore.activeNetworkId,
@@ -174,10 +205,11 @@ export function useHomePage() {
   return {
     walletStore, networkStore, txStore, dappStore,
     mode, activeGroupId, keyword, refreshing, dialogs,
-    editingWallet, transferWallet, drainTargets, swapTargets,
-    visibleWallets, visibleTxs, defaultGroupId, drainCandidates,
+    editingWallet, transferWallet, drainTargets, swapTargets, collectTargets, batchSender,
+    visibleWallets, visibleTxs, defaultGroupId, drainCandidates, batchScope,
     drainHint, swapHint, drainDisabled, swapDisabled, hasDex,
-    refresh, refreshMissing, refreshTransfer, refreshDrain, refreshSwap,
-    openDrain, openSwap, openTransfer, openEdit, lock,
+    collectHint, collectDisabled, batchHintText, batchDisabled,
+    refresh, refreshMissing, refreshTransfer, refreshDrain, refreshSwap, refreshCollect, refreshBatch,
+    openDrain, openSwap, openCollect, openBatch, openTransfer, openEdit, lock,
   }
 }
