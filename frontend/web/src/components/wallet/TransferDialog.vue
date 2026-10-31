@@ -9,6 +9,7 @@ import MxSkeleton from '@/components/MxSkeleton.vue'
 import MxAddress from '@/components/MxAddress.vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useTxStore } from '@/stores/tx'
+import { trackBusy } from '@/utils/busy'
 import { estimateTransfer, sendTransfer, waitTx, errorText } from '@/utils/chain'
 import { formatAmount } from '@/utils/format'
 import { validate, rules, isEvmAddress } from '@/utils/validate'
@@ -34,6 +35,7 @@ const to = ref('')
 const amount = ref('')
 const errors = ref({})
 const sending = ref(false)
+trackBusy(sending)
 /** 手续费估算：loading / fee(bigint) / gasLimit / feeData / error */
 const estimate = reactive({ loading: false, fee: null, gasLimit: null, feeData: null, error: '' })
 

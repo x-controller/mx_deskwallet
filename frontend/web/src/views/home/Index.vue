@@ -23,9 +23,12 @@ import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
 import { useDappStore } from '@/stores/dapp'
+import { useUpdateStore } from '@/stores/update'
 import { message } from '@/utils/message'
 
 const PENDING_POLL_MS = 10000
+/** 启动后隔多久再检查一次更新 */
+const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000
 
 const router = useRouter()
 const vault = useVaultStore()
@@ -33,6 +36,7 @@ const walletStore = useWalletStore()
 const networkStore = useNetworkStore()
 const txStore = useTxStore()
 const dappStore = useDappStore()
+const updateStore = useUpdateStore()
 
 /** 主区域：wallets 钱包列表 | history 交易记录 */
 const mode = ref('wallets')
@@ -156,6 +160,7 @@ watch(
 
 /* 有待确认交易时后台轮询回执（上次会话遗留的待确认记录也靠这里补齐） */
 let pollTimer
+let updateTimer
 onMounted(() => {
   refreshBalances()
   txStore.refreshPending(networkStore.networks)
@@ -164,9 +169,16 @@ onMounted(() => {
   pollTimer = setInterval(() => {
     if (txStore.pendingCount) txStore.refreshPending(networkStore.networks)
   }, PENDING_POLL_MS)
+  // 自动检查失败（没网等）不打扰用户，点状态栏版本号手动检查时才提示
+  updateStore.init().catch(() => {})
+  updateStore.check().catch(() => {})
+  updateTimer = setInterval(() => updateStore.check().catch(() => {}), UPDATE_CHECK_MS)
 })
 
-onBeforeUnmount(() => clearInterval(pollTimer))
+onBeforeUnmount(() => {
+  clearInterval(pollTimer)
+  clearInterval(updateTimer)
+})
 </script>
 
 <template>

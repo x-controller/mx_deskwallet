@@ -10,6 +10,7 @@ import { useDappStore } from '@/stores/dapp'
 import { useWalletStore, isWatchWallet } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
+import { trackBusy } from '@/utils/busy'
 import { chainIdOf, classifyRequest, parseTxRequest, decodeTxData, parseSignMessage, parseTypedData, estimateTxGas, executeRequest } from '@/utils/dapp'
 import { waitTx, errorText } from '@/utils/chain'
 import { formatAmount } from '@/utils/format'
@@ -28,6 +29,7 @@ const networkStore = useNetworkStore()
 const txStore = useTxStore()
 
 const submitting = ref(false)
+trackBusy(submitting)
 const estimate = reactive({ loading: false, gasLimit: null, fee: null, error: '' })
 
 const method = computed(() => props.request.params.request.method)

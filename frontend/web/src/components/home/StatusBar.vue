@@ -1,12 +1,14 @@
 <script setup>
 import { computed } from 'vue'
-import { RiDeleteBinLine } from '@remixicon/vue'
+import { RiDeleteBinLine, RiDownloadLine } from '@remixicon/vue'
 import MxSelect from '@/components/MxSelect.vue'
 import MxButton from '@/components/MxButton.vue'
+import MxSpinner from '@/components/MxSpinner.vue'
 import MxTooltip from '@/components/MxTooltip.vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useNetworkStore } from '@/stores/network'
 import { useTxStore } from '@/stores/tx'
+import { useUpdateStore } from '@/stores/update'
 import { formatTime } from '@/utils/format'
 import { confirm } from '@/utils/confirm'
 import { message } from '@/utils/message'
@@ -19,6 +21,7 @@ const props = defineProps({
 const walletStore = useWalletStore()
 const networkStore = useNetworkStore()
 const txStore = useTxStore()
+const updateStore = useUpdateStore()
 
 const isHistory = computed(() => props.mode === 'history')
 const selectedCount = computed(() => walletStore.selectedIds.size)
@@ -48,6 +51,16 @@ async function clearTxs() {
   await txStore.clear()
   message.success('交易记录已清空')
 }
+
+async function checkUpdate() {
+  try {
+    const update = await updateStore.check()
+    if (update) updateStore.install()
+    else message.success('已经是最新版本')
+  } catch (e) {
+    message.error(e?.message || String(e))
+  }
+}
 </script>
 
 <template>
@@ -75,9 +88,17 @@ async function clearTxs() {
       </template>
     </template>
     <span class="status-bar__right">
+      <span v-if="updateStore.phase" class="status-bar__updating"><MxSpinner :size="12" />{{ updateStore.statusText }}</span>
+      <MxButton v-else-if="updateStore.available" size="sm" @click="updateStore.install()">
+        <RiDownloadLine size="14" />
+        新版本 v{{ updateStore.available.version }}
+      </MxButton>
       <span v-if="!isHistory && walletStore.lastRefreshAt">余额更新于 {{ formatTime(walletStore.lastRefreshAt) }}</span>
       <span v-if="!isHistory && walletStore.lastRefreshAt && networkStore.activeNetwork" class="status-bar__dot">·</span>
       <span v-if="networkStore.activeNetwork">Chain ID {{ networkStore.activeNetwork.chainId }}</span>
+      <MxTooltip v-if="updateStore.version" content="检查更新">
+        <MxButton size="sm" :loading="updateStore.checking" :disabled="!!updateStore.phase" @click="checkUpdate">v{{ updateStore.version }}</MxButton>
+      </MxTooltip>
     </span>
   </footer>
 </template>
@@ -105,7 +126,14 @@ async function clearTxs() {
 
 .status-bar__right {
   display: inline-flex;
+  align-items: center;
   gap: var(--mx-space-sm);
   margin-left: auto;
+}
+
+.status-bar__updating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mx-space-xs);
 }
 </style>

@@ -13,6 +13,7 @@ import SwapAssetPicker, { CUSTOM_KEY } from './SwapAssetPicker.vue'
 import SwapQuotePanel from './SwapQuotePanel.vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useTxStore } from '@/stores/tx'
+import { trackBusy } from '@/utils/busy'
 import { runPool, errorText } from '@/utils/chain'
 import { quoteSwap, applySlippage, swapWallet } from '@/utils/dex'
 import { formatAmount } from '@/utils/format'
@@ -49,6 +50,7 @@ const quote = reactive({ loading: false, error: '', amountOut: null, amountOutMi
 const progress = reactive({})
 const logs = ref([])
 const running = ref(false)
+trackBusy(running)
 const finished = ref(false)
 
 const single = computed(() => props.wallets.length === 1)

@@ -4,9 +4,9 @@ import { useVaultStore } from './vault'
 
 /** 对 dApp 声明的钱包信息 */
 const WALLET_METADATA = {
-  name: 'MX DeskWallet',
+  name: 'Portunus',
   description: '极简 EVM 桌面钱包',
-  url: 'https://github.com/x-controller/mx_deskwallet',
+  url: 'https://github.com/x-controller/Portunus',
   icons: [],
 }
 

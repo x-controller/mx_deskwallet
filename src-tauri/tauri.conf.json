@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MX DeskWallet",
-  "version": "1.1.0",
-  "identifier": "com.mx.deskwallet",
+  "productName": "Portunus",
+  "version": "1.2.0",
+  "identifier": "com.mx.portunus",
   "build": {
     "beforeDevCommand": "pnpm --dir frontend/web dev",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MX DeskWallet",
+        "title": "Portunus",
         "width": 1080,
         "height": 680,
         "minWidth": 860,
@@ -24,8 +24,16 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ4OTQzMjVCODVBMzEwN0UKUldSK0VLT0ZXektVMlBvZzJMVEFSaFJDZERROWxnZWkyTXgycitvM0RPRFl5RXJiSkp0bUtjOW4K",
+      "endpoints": ["https://github.com/x-controller/Portunus/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",

@@ -59,7 +59,7 @@ async function reset() {
   <div class="unlock">
     <form class="unlock__card" @submit.prevent="submit">
       <RiShieldKeyholeLine size="36" class="unlock__icon" />
-      <h1 class="unlock__title">MX DeskWallet</h1>
+      <h1 class="unlock__title">Portunus</h1>
       <p class="unlock__hint">{{ isNew ? '设置口令，私钥将以此口令加密保存在本机' : '输入口令解锁' }}</p>
       <MxInput
         v-model="password"

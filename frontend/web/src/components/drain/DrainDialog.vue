@@ -7,6 +7,7 @@ import DrainAssetList from './DrainAssetList.vue'
 import WalletProgressList from '@/components/wallet/WalletProgressList.vue'
 import WalletLogPanel from '@/components/wallet/WalletLogPanel.vue'
 import { useTxStore } from '@/stores/tx'
+import { trackBusy } from '@/utils/busy'
 import { drainWallet, fetchNativeBalance, fetchTokenBalance, runPool } from '@/utils/chain'
 import { validate, rules } from '@/utils/validate'
 import { confirm } from '@/utils/confirm'
@@ -31,6 +32,7 @@ const totals = reactive({})
 const progress = reactive({})
 const logs = ref([])
 const running = ref(false)
+trackBusy(running)
 const finished = ref(false)
 
 const assets = computed(() => {

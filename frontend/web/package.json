@@ -1,7 +1,7 @@
 {
-  "name": "mx-deskwallet-web",
+  "name": "portunus-web",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
